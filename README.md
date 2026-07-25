@@ -1,35 +1,121 @@
 # YSM Mapping API
 
-YSM Mapping API は、Yes Steve Model の class、method、field を構造解析し、型付きの意味 symbol として扱うための profile 駆動基盤です。
+YSM Mapping APIは、導入済みYes Steve Modelの難読化されたclass、method、fieldを構造解析し、他modへ型付きの意味キーとして提供するMinecraft 1.21.1向け前提modです。
 
-`main` は Minecraft／loader に依存しない共有実装だけを管理します。
+- Fabric／NeoForge、Java 21、YSM 2.6.0以上
+- 実行時のネット照会、YSMの自動ダウンロード、対応版上限なし
+- version-specific baselineを同梱せず、すべてのYSM版を同じ`STRUCTURAL`経路で解析
+- 公開registryはsemantic key 94件（Serverless 62件、Equipment直接9件、関連23件）
+- registry外はconsumer所有の構造definitionとsource aliasで要求
+- 既定は`SAFE_ONLY`。一意に検証できない候補は返さない
+- cacheは固定ファイル名で、最後に正常に解析したYSMだけを保持
 
-- `api-core`: mapping target、resolution policy/status、resolved symbol、candidate、汎用 structure constraints
-- `analysis-core`: ASM whole-JAR graph、fingerprint、JSON profile/catalog の正規化・検証、profile 駆動解析
-- `mapping-tool`: 任意の有効な profile を処理するオフライン CLI
+## 利用modからの要求
 
-Minecraft 固有の curated registry、request/cache schema、runtime adapter、profile、fixture catalog、Fabric／NeoForge 配布物は `mc/<minecraft-version>` ブランチで管理します。`api` は `api-core` を推移依存として公開し、配布 API JAR に core class を一度だけ埋め込むため、既存利用側の import は変わりません。
+利用modは自身のJARへ`META-INF/ysm-mapping-api/requests-v1.json`を格納します。consumer mod IDはJSONではなく、このresourceを所有するmod containerから取得されます。
 
-## mapping-tool
-
-`mapping-tool` は `api`／`common` に依存せず、`analysis-core` と `api-core` だけを使用します。
-
-```text
-graph <ysm-jar> <output-json>
-analyze <profile-json> <loader> <ysm-version> <ysm-jar>
-equipment-report <profile-json> <loader> <ysm-jar>
-registry-report <profile-json> <catalog-json> <official-jar-dir> <output-json>
-name-report <profile-json> <candidate-spec-json> <openysm-root> <port-root> <official-jar-dir> <output-json>
+```json
+{
+  "schemaVersion": 1,
+  "symbols": [
+    {
+      "key": "ysm.network.packet.1.class",
+      "kind": "CLASS",
+      "required": true,
+      "sourceAlias": {
+        "common": { "owner": "net/okitsu/example/ysmref/PacketOne" },
+        "fabric": {},
+        "neoforge": {}
+      }
+    },
+    { "key": "ysm.client.model_manager.start_sync.method", "kind": "METHOD", "required": true },
+    { "key": "ysm.player_state.flags.field", "kind": "FIELD", "required": false }
+  ],
+  "mixinRequirements": {
+    "net.example.mixin.YsmPacketMixin": [
+      "ysm.network.packet.1.class"
+    ]
+  }
+}
 ```
 
-profile は形式／Minecraft version、loader 型、symbol 定義、構造制約、解析 rule、packet 規則、channel、出典を保持します。正規化した profile SHA-256 は registry definition digest に含まれるため、profile が変わると既存 cache は一度だけ再構築されます。
+通常初期化後は`YsmMappingApi.resolve(consumerModId, symbolKeys)`を呼び、`MappingSnapshot`から`YsmClassSymbol`、`YsmMethodSymbol`、`YsmFieldSymbol`を取得します。`YsmSymbols.registry()`が読み取り専用の94件のsemantic registryを公開します。`ysm.*`の未登録keyは拒否され、追加用途は`consumerClass`／`consumerMethod`／`consumerField`でmod IDごとにscopeします。
+
+Mixinを将来版YSMへremapするconfigではpluginとruntime refmap wrapperを指定します。wrapperは利用mod側のMixin packageに置き、`YsmMappingReferenceMapper`を継承します。Mixinから参照するsymbolにはconsumer所有の`sourceAlias`が必須です。`common`を完全なaliasとし、`fabric`／`neoforge`は指定フィールドだけを上書きします。Reflection／MethodHandleだけで使用するcurated keyにはaliasは不要です。
+
+```json
+{
+  "package": "net.example.mixin",
+  "plugin": "net.okitsu.ysmmapping.internal.mixin.YsmMappingMixinPlugin",
+  "refmapWrapper": "YsmReferenceMapper"
+}
+```
+
+## 保存ファイル
+
+```text
+config/ysm_mapping_api/
+├─ settings.json
+├─ mappings.json
+└─ mappings.lock  # mapping処理中だけ作成
+```
+
+`mappings.lock`は排他処理の終了後に削除され、未使用状態では残りません。`mappings.json`にはMC版、loader、YSM版、YSM class内容の完全SHA-512を`target`として保存します。パスへversionやhashは含めません。
+
+```json
+{
+  "schemaVersion": 1,
+  "fingerprintAlgorithm": 1,
+  "registryDefinitionSha256": "<64 lowercase hex characters>",
+  "fingerprintDefinitionSha256": "<64 lowercase hex characters>",
+  "resolutionPolicy": "SAFE_ONLY",
+  "target": {
+    "minecraftVersion": "1.21.1",
+    "loader": "fabric",
+    "ysmVersion": "2.6.5-fabric+mc1.21.1",
+    "contentSha512": "<128 lowercase hex characters>"
+  },
+  "entries": {
+    "ysm.client.model_manager.start_sync.method": {
+      "origin": "CURATED",
+      "definitionRevision": 1,
+      "definitionSha256": "<64 lowercase hex characters>",
+      "kind": "METHOD",
+      "status": "STRUCTURAL",
+      "confidence": 1.0,
+      "resolved": {
+        "owner": "com/elfmcys/yesstevemodel/<obfuscated-owner>",
+        "name": "<obfuscated-method>",
+        "descriptor": "(Lnet/minecraft/class_2535;Ljava/nio/ByteBuffer;)V"
+      },
+      "candidates": []
+    }
+  },
+  "consumers": {
+    "example_mod": {
+      "manifestSchemaVersion": 1,
+      "requests": {
+        "ysm.client.model_manager.start_sync.method": {
+          "definitionRevision": 1,
+          "kind": "METHOD",
+          "definitionSha256": "<64 lowercase hex characters>",
+          "sourceAliasSha256": null,
+          "required": true
+        }
+      }
+    }
+  }
+}
+```
+
+同じtarget、registry digest、fingerprint digest、要求definition digestで全要求が揃っていれば無書込みで読み込みます。同じYSMへ要求が増えた場合は既存consumerを残して不足entryだけを追加します。consumer definitionだけが変わればそのscoped entryだけを再解析します。alias digestはdefinition digestから独立しているため、aliasだけの変更ではYSM構造を再解析せずconsumer metadataとremapperを更新します。YSMやglobal digestが変わった場合は全要求を再収集して単一targetへatomic replaceし、旧target、履歴、backup、短縮hashディレクトリは作りません。
+
+OpenYSM由来の実名は`CuratedDefinitionRegistry`のprovenanceと構造定義の検証にだけ使用し、公開IDやversion-specific runtime対応は同梱しません。whole-JAR graphの匿名nodeは実行中だけ`@anon/sha256/<64-hex>`で識別されます。
 
 ## 開発
 
-共有ツリーは次で検証します。
-
 ```powershell
-.\gradlew.bat clean build
+.\gradlew.bat clean build verifyDistributions
 ```
 
-MC ブランチでは同じ build に加えて `verifyDistributions` を実行します。fixture JAR、runtime name、whole-JAR graph、native library、逆コンパイル結果、private-derived report は Git および配布物へ含めません。
+`mapping-tool`は開発時のローカルJAR検証専用です。公式2.6.0～2.6.5のloader別12 JARはGit管理外のfixtureとして`registry-report`で検証し、結果だけを`build/reports`へ出力します。YSM JAR、runtime名、whole-JAR graph、native library、逆コンパイル結果はGitおよび配布物へ含めません。

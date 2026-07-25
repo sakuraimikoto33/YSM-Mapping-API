@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "ysm_mapping_api",
+  "version": "${version}",
+  "name": "YSM Mapping API",
+  "description": "Runtime structural mappings for Yes Steve Model consumers.",
+  "environment": "*",
+  "entrypoints": {
+    "preLaunch": [
+      "net.okitsu.ysmmapping.fabric.YsmMappingFabric"
+    ],
+    "main": [
+      "net.okitsu.ysmmapping.fabric.YsmMappingFabric"
+    ]
+  },
+  "mixins": [
+    "ysm_mapping_api.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~${minecraftVersion}",
+    "java": ">=21",
+    "yes_steve_model": ">=2.6.0"
+  }
+}

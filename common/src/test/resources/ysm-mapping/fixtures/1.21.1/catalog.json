@@ -1,0 +1,80 @@
+{
+  "formatVersion": 1,
+  "minecraftVersion": "1.21.1",
+  "fixtures": [
+    {
+      "fileName": "ysm-2.6.0-fabric+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.0",
+      "loader": "fabric"
+    },
+    {
+      "fileName": "ysm-2.6.0-neoforge+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.0",
+      "loader": "neoforge"
+    },
+    {
+      "fileName": "ysm-2.6.1-fabric+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.1",
+      "loader": "fabric"
+    },
+    {
+      "fileName": "ysm-2.6.1-neoforge+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.1",
+      "loader": "neoforge"
+    },
+    {
+      "fileName": "ysm-2.6.2-fabric+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.2",
+      "loader": "fabric"
+    },
+    {
+      "fileName": "ysm-2.6.2-neoforge+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.2",
+      "loader": "neoforge"
+    },
+    {
+      "fileName": "ysm-2.6.3-fabric+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.3",
+      "loader": "fabric"
+    },
+    {
+      "fileName": "ysm-2.6.3-neoforge+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.3",
+      "loader": "neoforge"
+    },
+    {
+      "fileName": "ysm-2.6.4-fabric+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.4",
+      "loader": "fabric"
+    },
+    {
+      "fileName": "ysm-2.6.4-neoforge+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.4",
+      "loader": "neoforge"
+    },
+    {
+      "fileName": "ysm-2.6.5-fabric+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.5",
+      "loader": "fabric"
+    },
+    {
+      "fileName": "ysm-2.6.5-neoforge+mc1.21.1-release.jar",
+      "ysmVersion": "2.6.5",
+      "loader": "neoforge"
+    }
+  ],
+  "expectations": {
+    "registryTotal": 94,
+    "categories": {
+      "SERVERLESS": 62,
+      "EQUIPMENT_DIRECT": 9,
+      "EQUIPMENT_RELATED": 23
+    },
+    "equipmentDirectRequiredLoaders": [
+      "neoforge"
+    ],
+    "equipmentFullRequiredYsmVersions": [
+      "2.6.5"
+    ]
+  }
+}

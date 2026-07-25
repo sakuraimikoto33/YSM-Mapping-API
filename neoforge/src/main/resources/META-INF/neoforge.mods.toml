@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="Not specified"
+
+[[mods]]
+modId="ysm_mapping_api"
+version="${version}"
+displayName="YSM Mapping API"
+description='''Runtime structural mappings for Yes Steve Model consumers.'''
+
+[[dependencies.ysm_mapping_api]]
+modId="neoforge"
+type="required"
+versionRange="[${neoForgeVersion},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.ysm_mapping_api]]
+modId="minecraft"
+type="required"
+versionRange="[${minecraftVersion}]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.ysm_mapping_api]]
+modId="yes_steve_model"
+type="required"
+versionRange="[2.6.0,)"
+ordering="AFTER"
+side="BOTH"
+
+[[mixins]]
+config="ysm_mapping_api.mixins.json"

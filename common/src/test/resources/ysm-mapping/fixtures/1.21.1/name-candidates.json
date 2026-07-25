@@ -1,0 +1,137 @@
+{
+  "formatVersion": 1,
+  "minecraftVersion": "1.21.1",
+  "ysmVersion": "2.6.5",
+  "fixtures": {
+    "fabric": "ysm-2.6.5-fabric+mc1.21.1-release.jar",
+    "neoforge": "ysm-2.6.5-neoforge+mc1.21.1-release.jar"
+  },
+  "sources": {
+    "openYsmRepository": "https://github.com/OpenYSM/OpenYSM",
+    "openYsmCommit": "abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b",
+    "portRepository": "https://github.com/melon-444/OpenYSM-1.21.1Port",
+    "portCommit": "7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b"
+  },
+  "candidates": [
+    {
+      "semanticKey": "ysm.network.registration.class",
+      "kind": "CLASS",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.NetworkHandler", "name": "NetworkHandler" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.NetworkHandler", "name": "NetworkHandler" }
+    },
+    {
+      "semanticKey": "ysm.network.packet.1.class",
+      "kind": "CLASS",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.S2CModelSyncPayload", "name": "S2CModelSyncPayload" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.S2CModelSyncPayload", "name": "S2CModelSyncPayload" }
+    },
+    {
+      "semanticKey": "ysm.network.packet.2.class",
+      "kind": "CLASS",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SModelSyncPayload", "name": "C2SModelSyncPayload" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SModelSyncPayload", "name": "C2SModelSyncPayload" }
+    },
+    {
+      "semanticKey": "ysm.network.packet.15.class",
+      "kind": "CLASS",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SCompleteFeedbackPacket", "name": "C2SCompleteFeedbackPacket" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SCompleteFeedbackPacket", "name": "C2SCompleteFeedbackPacket" }
+    },
+    {
+      "semanticKey": "ysm.network.packet.21.class",
+      "kind": "CLASS",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.S2CSyncPlayerStatePacket", "name": "S2CSyncPlayerStatePacket" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.S2CSyncPlayerStatePacket", "name": "S2CSyncPlayerStatePacket" }
+    },
+    {
+      "semanticKey": "ysm.client.model_manager.start_sync.method",
+      "kind": "METHOD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "startSync" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "startSync" }
+    },
+    {
+      "semanticKey": "ysm.client.model_manager.model_map_getter.method",
+      "kind": "METHOD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "getModelAssemblyMap" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "getModelAssemblyMap" }
+    },
+    {
+      "semanticKey": "ysm.server.model_manager.receive.method",
+      "kind": "METHOD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.model.ServerModelManager", "name": "nativeSendModelData" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.model.ServerModelManager", "name": "nativeSendModelData" }
+    },
+    {
+      "semanticKey": "ysm.client.model_manager.connected.method",
+      "kind": "METHOD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "onSyncConnected" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "onSyncConnected" }
+    },
+    {
+      "semanticKey": "ysm.client.model_manager.reset.method",
+      "kind": "METHOD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "resetSync" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "resetSync" }
+    },
+    {
+      "semanticKey": "ysm.client.model_manager.flush_pending.method",
+      "kind": "METHOD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "flushPendingModels" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.client.ClientModelManager", "name": "flushPendingModels" }
+    },
+    {
+      "semanticKey": "ysm.player_state.flags.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.S2CSyncPlayerStatePacket", "name": "flags" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.S2CSyncPlayerStatePacket", "name": "flags" }
+    },
+    {
+      "semanticKey": "ysm.server.model_manager.model_map.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.model.ServerModelManager", "name": "CACHE_NAME_INFO" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.model.ServerModelManager", "name": "CACHE_NAME_INFO" }
+    },
+    {
+      "semanticKey": "ysm.feedback.packet.payload.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SCompleteFeedbackPacket", "name": "feedbackData" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SCompleteFeedbackPacket", "name": "feedbackData" }
+    },
+    {
+      "semanticKey": "ysm.feedback.model_key.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.FeedbackData", "name": "entityId" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.FeedbackData", "name": "entityId" }
+    },
+    {
+      "semanticKey": "ysm.feedback.target_entity_id.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.FeedbackData", "name": "flags" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.FeedbackData", "name": "flags" }
+    },
+    {
+      "semanticKey": "ysm.feedback.variables.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.FeedbackData", "name": "stringValues" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.FeedbackData", "name": "stringValues" }
+    },
+    {
+      "semanticKey": "ysm.animation.packet.index.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SPlayAnimationPacket", "name": "animationIndex" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SPlayAnimationPacket", "name": "animationIndex" }
+    },
+    {
+      "semanticKey": "ysm.animation.packet.pack.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SPlayAnimationPacket", "name": "category" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SPlayAnimationPacket", "name": "category" }
+    },
+    {
+      "semanticKey": "ysm.animation.packet.target_entity_id.field",
+      "kind": "FIELD",
+      "open": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SPlayAnimationPacket", "name": "entityId" },
+      "port": { "owner": "com.elfmcys.yesstevemodel.network.message.C2SPlayAnimationPacket", "name": "entityId" }
+    }
+  ]
+}

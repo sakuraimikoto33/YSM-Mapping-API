@@ -1,3 +1,5 @@
+import java.util.zip.ZipFile
+
 plugins {
     base
 }
@@ -25,4 +27,45 @@ subprojects {
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         }
     }
+}
+
+val verifyDistributions = tasks.register("verifyDistributions") {
+    group = "verification"
+    description = "Verifies the Fabric and NeoForge prerequisite mod distributions."
+    dependsOn(":fabric:remapJar", ":neoforge:jar")
+    doLast {
+        val jars = listOf(
+            project(":fabric").tasks.named("remapJar").get().outputs.files.singleFile,
+            project(":neoforge").tasks.named("jar").get().outputs.files.singleFile
+        )
+        for (jar in jars) {
+            ZipFile(jar).use { zip ->
+                val names = zip.entries().asSequence().map { it.name }.toList()
+                val requiredClasses = listOf(
+                    "net/okitsu/ysmmapping/api/MappingTarget.class",
+                    "net/okitsu/ysmmapping/api/MappingEntry.class",
+                    "net/okitsu/ysmmapping/internal/analysis/AnalysisProfile.class",
+                    "net/okitsu/ysmmapping/internal/cache/MappingEngine.class"
+                )
+                for (required in requiredClasses) {
+                    require(names.count { it == required } == 1) {
+                        "$required must occur exactly once in ${jar.name}"
+                    }
+                }
+                require(names.none { it.startsWith("com/elfmcys/yesstevemodel/") }) {
+                    "Proprietary YSM classes found in ${jar.name}"
+                }
+                require(names.any { it.endsWith("ysm_mapping_api.mixins.json") }) {
+                    "Bootstrap mixin configuration missing from ${jar.name}"
+                }
+                require(names.none { it.startsWith("ysm_mapping_api/reference/") }) {
+                    "Version-specific YSM reference data found in ${jar.name}"
+                }
+            }
+        }
+    }
+}
+
+tasks.check {
+    dependsOn(verifyDistributions)
 }
