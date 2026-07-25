@@ -1,0 +1,18 @@
+.gradle/
+build/
+**/build/
+**/bin/
+run/
+.idea/
+.vscode/
+**/.eclipse/
+**/.settings/
+**/.classpath
+**/.project
+*.iml
+*.log
+
+# Never commit proprietary YSM artifacts or derived decompiler output.
+local-ysm/
+ysm-analysis/
+test-fixtures/private/

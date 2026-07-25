@@ -1,0 +1,7 @@
+interface:
+  display_name: "Maintain YSM Mapping Contract"
+  short_description: "Maintain shared and Minecraft mapping contracts"
+  default_prompt: "Use $maintain-ysm-mapping-contract to change or validate api-core, public mapping, manifest, cache, or fingerprint contracts."
+
+policy:
+  allow_implicit_invocation: true

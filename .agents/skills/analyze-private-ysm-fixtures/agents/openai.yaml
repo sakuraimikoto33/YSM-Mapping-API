@@ -1,0 +1,7 @@
+interface:
+  display_name: "Analyze Private YSM Fixtures"
+  short_description: "Validate catalog-driven private YSM fixtures"
+  default_prompt: "Use $analyze-private-ysm-fixtures with a Minecraft profile and fixture catalog to analyze ignored local YSM fixtures without exposing derived private data."
+
+policy:
+  allow_implicit_invocation: true
