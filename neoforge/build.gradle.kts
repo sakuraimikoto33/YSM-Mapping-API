@@ -2,6 +2,7 @@ plugins {
     `java-library`
     id("net.neoforged.moddev") version "2.0.141"
 }
+
 val minecraftVersion = providers.gradleProperty("minecraftVersion").get()
 
 base {
@@ -15,17 +16,18 @@ java {
 
 neoForge {
     version = providers.gradleProperty("neoForgeVersion").get()
-    runs {
-        create("client") { client() }
-    }
-    mods {
-        create("ysm_mapping_api") { sourceSet(sourceSets.main.get()) }
-    }
-}
 
-dependencies {
-    implementation(project(":api"))
-    implementation(project(":common"))
+    runs {
+        create("client") {
+            client()
+        }
+    }
+
+    mods {
+        create("ysm_mapping_api") {
+            sourceSet(sourceSets.main.get())
+        }
+    }
 }
 
 val embeddedCommon by configurations.creating {
@@ -33,6 +35,9 @@ val embeddedCommon by configurations.creating {
 }
 
 dependencies {
+    implementation(project(":api"))
+    implementation(project(":common"))
+
     embeddedCommon(project(":api"))
     embeddedCommon(project(":analysis-core"))
     embeddedCommon(project(":common"))
@@ -48,6 +53,7 @@ tasks.processResources {
     inputs.property("version", project.version)
     inputs.property("minecraftVersion", minecraftVersion)
     inputs.property("neoForgeVersion", providers.gradleProperty("neoForgeVersion").get())
+
     filesMatching("META-INF/neoforge.mods.toml") {
         expand(
             "version" to project.version,

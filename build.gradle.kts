@@ -44,18 +44,22 @@ val verifyDistributions = tasks.register("verifyDistributions") {
         )
         for (jar in jars) {
             ZipFile(jar).use { zip ->
-                val names = zip.entries().asSequence().map { it.name }.toList()
+                val names = zip.entries().asSequence()
+                    .map { it.name }
+                    .toList()
                 val requiredClasses = listOf(
                     "net/okitsu/ysmmapping/api/MappingTarget.class",
                     "net/okitsu/ysmmapping/api/MappingEntry.class",
                     "net/okitsu/ysmmapping/internal/analysis/AnalysisProfile.class",
                     "net/okitsu/ysmmapping/internal/cache/MappingEngine.class"
                 )
+
                 for (required in requiredClasses) {
                     require(names.count { it == required } == 1) {
                         "$required must occur exactly once in ${jar.name}"
                     }
                 }
+
                 require(names.none { it.startsWith("com/elfmcys/yesstevemodel/") }) {
                     "Proprietary YSM classes found in ${jar.name}"
                 }

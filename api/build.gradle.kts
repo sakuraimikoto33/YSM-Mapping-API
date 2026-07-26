@@ -11,16 +11,14 @@ java {
     withSourcesJar()
 }
 
-dependencies {
-    api(project(":api-core"))
-    compileOnly("net.fabricmc:sponge-mixin:0.15.2+mixin.0.8.7")
-}
-
 val embeddedCore by configurations.creating {
     isTransitive = false
 }
 
 dependencies {
+    api(project(":api-core"))
+    compileOnly("net.fabricmc:sponge-mixin:0.15.2+mixin.0.8.7")
+
     embeddedCore(project(":api-core"))
 }
 

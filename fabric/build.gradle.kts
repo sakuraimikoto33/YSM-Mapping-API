@@ -19,6 +19,7 @@ dependencies {
     minecraft("com.mojang:minecraft:$minecraftVersion")
     mappings(loom.officialMojangMappings())
     modImplementation("net.fabricmc:fabric-loader:${providers.gradleProperty("fabricLoaderVersion").get()}")
+
     implementation(project(":api"))
     implementation(project(":common"))
 }
@@ -41,7 +42,11 @@ tasks.jar {
 tasks.processResources {
     inputs.property("version", project.version)
     inputs.property("minecraftVersion", minecraftVersion)
+
     filesMatching("fabric.mod.json") {
-        expand("version" to project.version, "minecraftVersion" to minecraftVersion)
+        expand(
+            "version" to project.version,
+            "minecraftVersion" to minecraftVersion
+        )
     }
 }
