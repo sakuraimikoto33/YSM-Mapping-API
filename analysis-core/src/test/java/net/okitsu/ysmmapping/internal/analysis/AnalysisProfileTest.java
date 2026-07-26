@@ -35,6 +35,16 @@ class AnalysisProfileTest {
         assertEquals(left.profileSha256(), right.profileSha256());
         assertEquals(left.registryDefinitionSha256(), right.registryDefinitionSha256());
         assertEquals("example/Living", left.loader("alpha").livingEntity());
+        assertEquals("TEST", left.packets().get(1).name());
+        assertEquals(62, left.definitions().values().stream()
+                .filter(value -> YsmSymbols.usesServerlessAnalyzer(value.id()))
+                .count());
+        assertEquals(9, left.definitions().values().stream()
+                .filter(value -> YsmSymbols.isEquipmentDirect(value.id()))
+                .count());
+        assertEquals(23, left.definitions().values().stream()
+                .filter(value -> YsmSymbols.isEquipmentRelated(value.id()))
+                .count());
         assertThrows(IllegalArgumentException.class, () -> left.loader("missing"));
     }
 
@@ -51,7 +61,7 @@ class AnalysisProfileTest {
     }
 
     @Test
-    void missingBuiltInRoleFailsClosed() throws Exception {
+    void missingBuiltInSymbolFailsClosed() throws Exception {
         assertThrows(IllegalArgumentException.class,
                 () -> AnalysisProfile.load(write("invalid.json",
                         profile("test-mc", false, false))));
@@ -65,29 +75,6 @@ class AnalysisProfileTest {
                 value.getAsJsonArray("symbols").get(0).deepCopy());
         assertThrows(IllegalArgumentException.class,
                 () -> AnalysisProfile.load(write("duplicate.json", GSON.toJson(value))));
-    }
-
-    @Test
-    void unsupportedLoaderRefinementFailsClosed() throws Exception {
-        JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
-                .getAsJsonObject();
-        JsonObject structure = new JsonObject();
-        JsonObject loaders = new JsonObject();
-        loaders.add("unknown", JsonParser.parseString(GSON.toJson(constraints())));
-        structure.add("loaders", loaders);
-        value.getAsJsonArray("symbols").get(0).getAsJsonObject()
-                .add("structure", structure);
-        assertThrows(IllegalArgumentException.class,
-                () -> AnalysisProfile.load(write("unknown-loader.json", GSON.toJson(value))));
-    }
-
-    @Test
-    void missingSourceProvenanceFailsClosed() throws Exception {
-        JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
-                .getAsJsonObject();
-        value.remove("sources");
-        assertThrows(IllegalArgumentException.class,
-                () -> AnalysisProfile.load(write("missing-source.json", GSON.toJson(value))));
     }
 
     private Path write(String name, String value) throws Exception {
@@ -105,11 +92,6 @@ class AnalysisProfileTest {
             symbols.add(Map.of(
                     "id", key.id(),
                     "kind", key.kind().name(),
-                    "category", "SERVERLESS",
-                    "role", key.id(),
-                    "provenance", "synthetic test",
-                    "analysisRule", "synthetic-semantic-v1",
-                    "structure", Map.of(),
                     "definitionRevision", 1));
         }
         Map<String, Object> loader = new LinkedHashMap<>();
@@ -126,13 +108,11 @@ class AnalysisProfileTest {
         Map<String, Object> value = new LinkedHashMap<>();
         value.put("formatVersion", 1);
         value.put("minecraftVersion", minecraftVersion);
-        value.put("ysmClassPrefix", "example/ysm/");
-        value.put("expectedSymbolCount", symbols.size());
         value.put("loaders", Map.of("alpha", loader));
         value.put("channelIdentifiers", List.of("example:channel", "example-channel"));
-        value.put("sources", List.of(Map.of("repository", "https://example.invalid/source",
-                "commit", "test-revision")));
-        value.put("packets", List.of(Map.of("id", 1, "name", "TEST",
+        value.put("packets", List.of(Map.of(
+                "id", 1,
+                "name", "TEST",
                 "direction", "BOTH")));
         value.put("symbols", symbols);
         if (reverseTopLevel) {
@@ -145,18 +125,4 @@ class AnalysisProfileTest {
         return GSON.toJson(value);
     }
 
-    private static Map<String, Object> constraints() {
-        return Map.ofEntries(
-                Map.entry("requiredAccess", 0),
-                Map.entry("forbiddenAccess", 0),
-                Map.entry("superName", ""),
-                Map.entry("interfaces", List.of()),
-                Map.entry("memberShapes", List.of()),
-                Map.entry("descriptorShapes", List.of()),
-                Map.entry("opcodeDigests", List.of()),
-                Map.entry("constantDigests", List.of()),
-                Map.entry("externalReferences", List.of()),
-                Map.entry("callGraph", List.of()),
-                Map.entry("fieldGraph", List.of()));
-    }
 }

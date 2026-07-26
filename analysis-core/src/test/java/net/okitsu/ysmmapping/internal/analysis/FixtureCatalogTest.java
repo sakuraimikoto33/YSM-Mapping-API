@@ -87,24 +87,16 @@ class FixtureCatalogTest {
         List<Map<String, Object>> symbols = YsmSymbols.all().stream().map(key -> Map.of(
                 "id", (Object) key.id(),
                 "kind", key.kind().name(),
-                "category", "SERVERLESS",
-                "role", key.id(),
-                "provenance", "synthetic test",
-                "analysisRule", "synthetic-semantic-v1",
-                "structure", Map.of(),
                 "definitionRevision", 1)).toList();
         return GSON.toJson(Map.ofEntries(
                 Map.entry("formatVersion", 1),
                 Map.entry("minecraftVersion", "test-mc"),
-                Map.entry("ysmClassPrefix", "example/ysm/"),
-                Map.entry("expectedSymbolCount", symbols.size()),
                 Map.entry("loaders", Map.of("alpha", loader)),
                 Map.entry("channelIdentifiers", List.of("example:channel")),
-                Map.entry("sources", List.of(Map.of(
-                        "repository", "https://example.invalid/source",
-                        "commit", "test-revision"))),
                 Map.entry("packets", List.of(Map.of(
-                        "id", 1, "name", "TEST", "direction", "BOTH"))),
+                        "id", 1,
+                        "name", "TEST",
+                        "direction", "BOTH"))),
                 Map.entry("symbols", symbols)));
     }
 }
