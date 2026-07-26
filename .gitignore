@@ -2,7 +2,9 @@
 build/
 **/build/
 **/bin/
+out/
 run/
+logs/
 .idea/
 .vscode/
 **/.eclipse/
@@ -11,8 +13,9 @@ run/
 **/.project
 *.iml
 *.log
+*.hprof
 
-# Never commit proprietary YSM artifacts or derived decompiler output.
-local-ysm/
-ysm-analysis/
+# Never commit proprietary YSM artifacts.
+**/local-ysm/
+**/ysm-analysis/
 test-fixtures/private/
