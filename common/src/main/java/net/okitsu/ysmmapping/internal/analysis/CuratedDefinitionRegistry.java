@@ -35,4 +35,11 @@ public final class CuratedDefinitionRegistry {
         }
         return value;
     }
+
+    public static boolean usesEquipmentAnalyzer(
+            AnalysisProfile profile, YsmSymbolKey<?> key) {
+        get(profile, key);
+        return net.okitsu.ysmmapping.internal.analysis.YsmSymbols
+                .usesEquipmentAnalyzer(key.id());
+    }
 }

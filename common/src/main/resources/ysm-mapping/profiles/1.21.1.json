@@ -1,8 +1,6 @@
 {
   "formatVersion": 1,
   "minecraftVersion": "1.21.1",
-  "ysmClassPrefix": "com/elfmcys/yesstevemodel/",
-  "expectedSymbolCount": 94,
   "loaders": {
     "fabric": {
       "livingEntity": "net/minecraft/class_1309",
@@ -52,16 +50,6 @@
   "channelIdentifiers": [
     "yes_steve_model:2_6_0",
     "2.6.0"
-  ],
-  "sources": [
-    {
-      "repository": "https://github.com/OpenYSM/OpenYSM",
-      "commit": "abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b"
-    },
-    {
-      "repository": "https://github.com/melon-444/OpenYSM-1.21.1Port",
-      "commit": "7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b"
-    }
   ],
   "packets": [
     {
@@ -149,941 +137,471 @@
     {
       "id": "ysm.animation.packet.index.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "animation packet index field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.animation.packet.pack.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "animation packet pack field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.animation.packet.target_entity_id.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "animation packet target_entity_id field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.all_head_bone_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client animated_model all_head_bone_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.backpack_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model backpack_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.blade_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model blade_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.elytra_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model elytra_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.head_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client animated_model head_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.left_hand_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model left_hand_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.left_shoulder_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model left_shoulder_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.left_waist_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model left_waist_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.right_hand_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model right_hand_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.right_shoulder_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model right_shoulder_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.right_waist_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client animated_model right_waist_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.sheath_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model sheath_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.tac_pistol_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model tac_pistol_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.animated_model.tac_rifle_bones_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client animated_model tac_rifle_bones_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.config.not_display_models.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "client config not_display_models field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.custom_player.current_model_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client custom_player current_model_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.custom_player.entity_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client custom_player entity_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.equipment.armor_item_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client equipment armor_item_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.equipment.elytra_item_getter.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client equipment elytra_item_getter method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.catalog_delta_callback.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager catalog_delta_callback method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.connected.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager connected method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.flush_pending.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager flush_pending method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.model_map_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager model_map_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.pack_map_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager pack_map_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.pending_count_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager pending_count_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.raw_sender.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager raw_sender method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.reset.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager reset method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.model_manager.start_sync.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client model_manager start_sync method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.render_utils.prep_matrix_for_bone.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client render_utils prep_matrix_for_bone method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.render_utils.prep_matrix_for_locator.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client render_utils prep_matrix_for_locator method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.render_utils.rotate_matrix_around_bone.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client render_utils rotate_matrix_around_bone method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.render_utils.scale_matrix_for_bone.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client render_utils scale_matrix_for_bone method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.render_utils.translate_and_rotate_matrix_for_bone.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client render_utils translate_and_rotate_matrix_for_bone method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.render_utils.translate_away_from_pivot_point.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client render_utils translate_away_from_pivot_point method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.render_utils.translate_matrix_to_bone.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client render_utils translate_matrix_to_bone method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.render_utils.translate_to_pivot_point.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client render_utils translate_to_pivot_point method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.renderer.armor_layer.render.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client renderer armor_layer render method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.renderer.backpack_layer.render.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client renderer backpack_layer render method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.renderer.elytra_layer.render_elytra.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client renderer elytra_layer render_elytra method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.renderer.elytra_layer.render.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_DIRECT",
-      "role": "client renderer elytra_layer render method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.renderer.item_in_hand_layer.render.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client renderer item_in_hand_layer render method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.renderer.parrot_layer.render.method",
       "kind": "METHOD",
-      "category": "EQUIPMENT_RELATED",
-      "role": "client renderer parrot_layer render method",
-      "provenance": "YSM_Equipment_Render-Patch analyzer and adjacent render surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "equipment-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.client.send.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "client send method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.feedback.model_key.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "feedback model key transported by the source entityId slot",
-      "provenance": "FeedbackData#entityId; role verified by use path|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.feedback.packet.payload.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "feedback packet payload field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.feedback.target_entity_id.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "feedback target entity id transported by the source flags slot",
-      "provenance": "FeedbackData#flags; role verified by use path|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.feedback.variables.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "feedback variables field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.model_properties.animation_packs_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "model_properties animation_packs_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.model_properties.default_animations_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "model_properties default_animations_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.channel_version_setter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "network channel_version_setter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.1.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 1 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.15.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 15 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.16.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 16 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.17.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 17 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.18.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 18 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.19.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 19 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.2.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 2 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.21.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 21 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.22.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 22 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.23.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 23 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.3.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 3 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.4.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 4 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.5.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 5 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.51.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 51 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.52.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 52 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.packet.7.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network packet 7 class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.registration.class",
       "kind": "CLASS",
-      "category": "SERVERLESS",
-      "role": "network registration class",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.network.registration.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "loader-specific network payload registration entry point",
-      "provenance": "OpenYSM#init and 1.21.1Port#registerPayloads; semantic role unifies names|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.ordered_animation.count_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "ordered_animation count_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.ordered_animation.name_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "ordered_animation name_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.player_state.animation_setter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "player_state animation_setter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.player_state.client_handler.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "player_state client_handler method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.player_state.codec_decoder.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "player_state codec_decoder method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.player_state.codec_writer.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "player_state codec_writer method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.player_state.decoded_roaming.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "player_state decoded_roaming field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.player_state.flags.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "player_state flags field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.player_state.full_roaming_initializer.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "player_state full_roaming_initializer method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.player_state.roaming_setter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "player_state roaming_setter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_container.data_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_container data_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_data.properties_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_data properties_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_data.storage_key_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_data storage_key_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_manager.model_map_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_manager model_map_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_manager.model_map.field",
       "kind": "FIELD",
-      "category": "SERVERLESS",
-      "role": "server model_manager model_map field",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_manager.payload_callback.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_manager payload_callback method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_manager.payload_factory.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_manager payload_factory method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_manager.receive.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_manager receive method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_manager.reload.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_manager reload method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_manager.stream_callback.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_manager stream_callback method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.model_manager.sync.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server model_manager sync method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.sync_result.error_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server sync_result error_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     },
     {
       "id": "ysm.server.sync_result.success_getter.method",
       "kind": "METHOD",
-      "category": "SERVERLESS",
-      "role": "server sync_result success_getter method",
-      "provenance": "Serverless-YSM 62-symbol compatibility surface|OpenYSM@abf6a6a17e4d39b25df7d7a9b697ef1fb91de92b|1.21.1Port@7a8ee65cb3c15c43e694e30e8f6b932ba6ea029b",
-      "analysisRule": "serverless-semantic-v1",
-      "structure": {},
       "definitionRevision": 1
     }
   ]

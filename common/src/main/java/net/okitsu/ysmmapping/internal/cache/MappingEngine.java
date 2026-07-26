@@ -164,16 +164,14 @@ public final class MappingEngine implements YsmMappingProvider {
         Map<YsmSymbolKey<?>, String> structuralDiagnostics = Map.of();
         boolean needsEquipment = requests.stream().anyMatch(value -> value.key.origin()
                 == SymbolOrigin.CURATED
-                && CuratedDefinitionRegistry.get(profile, value.key).category()
-                != AnalysisProfile.Category.SERVERLESS);
+                && CuratedDefinitionRegistry.usesEquipmentAnalyzer(profile, value.key));
         if (needsEquipment) {
             equipment = publicSymbols(new EquipmentSemanticAnalyzer().analyze(classIndex,
                     profile, installation.loader()));
         }
         boolean needsServerless = requests.stream().anyMatch(value -> value.key.origin()
                 == SymbolOrigin.CURATED
-                && CuratedDefinitionRegistry.get(profile, value.key).category()
-                == AnalysisProfile.Category.SERVERLESS);
+                && !CuratedDefinitionRegistry.usesEquipmentAnalyzer(profile, value.key));
         if (needsServerless) {
             var artifact = new YsmArtifact("runtime", installation.minecraftVersion(),
                     installation.loader(), installation.ysmVersion(), target.contentSha512());
