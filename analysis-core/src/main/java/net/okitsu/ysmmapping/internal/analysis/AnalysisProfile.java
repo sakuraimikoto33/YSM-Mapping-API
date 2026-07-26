@@ -6,7 +6,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.okitsu.ysmmapping.api.SymbolKind;
-import net.okitsu.ysmmapping.api.YsmStructureConstraints;
 import net.okitsu.ysmmapping.api.YsmSymbolSignatures;
 
 import java.io.IOException;
@@ -31,10 +30,8 @@ public final class AnalysisProfile {
     private static final Gson GSON = new Gson();
 
     private final String minecraftVersion;
-    private final String ysmClassPrefix;
     private final Map<String, LoaderTypes> loaders;
     private final List<String> channelIdentifiers;
-    private final List<Source> sources;
     private final Map<Integer, PacketDefinition> packets;
     private final Map<String, Definition> definitions;
     private final String profileSha256;
@@ -46,7 +43,6 @@ public final class AnalysisProfile {
                     + raw.formatVersion);
         }
         minecraftVersion = requireText(raw.minecraftVersion, "minecraftVersion");
-        ysmClassPrefix = requireInternalPrefix(raw.ysmClassPrefix);
         if (raw.loaders == null || raw.loaders.isEmpty()) {
             throw new IllegalArgumentException("Analysis profile has no loaders");
         }
@@ -66,20 +62,14 @@ public final class AnalysisProfile {
         if (channelIdentifiers.size() != raw.channelIdentifiers.size()) {
             throw new IllegalArgumentException("Duplicate channel identifier");
         }
-        sources = requireList(raw.sources, "sources").stream().map(value ->
-                new Source(requireText(value.repository, "source repository"),
-                        requireText(value.commit, "source commit"))).distinct().toList();
-        if (sources.size() != raw.sources.size()) {
-            throw new IllegalArgumentException("Duplicate source provenance");
-        }
-
         Map<Integer, PacketDefinition> packetValues = new TreeMap<>();
         for (RawPacket value : requireList(raw.packets, "packets")) {
             PacketDefinition packet = new PacketDefinition(value.id,
                     requireText(value.name, "packet name"),
                     requireText(value.direction, "packet direction"));
             if (packet.id() < 0 || packetValues.putIfAbsent(packet.id(), packet) != null) {
-                throw new IllegalArgumentException("Invalid or duplicate packet id: " + packet.id());
+                throw new IllegalArgumentException("Invalid or duplicate packet id: "
+                        + packet.id());
             }
         }
         packets = Collections.unmodifiableMap(packetValues);
@@ -88,44 +78,34 @@ public final class AnalysisProfile {
         for (RawDefinition value : requireList(raw.symbols, "symbols")) {
             String id = requireText(value.id, "symbol id");
             SymbolKind kind;
-            Category category;
             try {
                 kind = SymbolKind.valueOf(requireText(value.kind, "symbol kind")
-                        .toUpperCase(Locale.ROOT));
-                category = Category.valueOf(requireText(value.category, "symbol category")
                         .toUpperCase(Locale.ROOT));
             } catch (IllegalArgumentException exception) {
                 throw new IllegalArgumentException("Invalid symbol metadata: " + id, exception);
             }
+            String analysisGroup = YsmSymbols.analysisGroup(id);
             String expectedSuffix = "." + kind.name().toLowerCase(Locale.ROOT);
             if (!id.startsWith("ysm.") || !id.endsWith(expectedSuffix)
                     || value.definitionRevision != 1) {
                 throw new IllegalArgumentException("Invalid symbol definition: " + id);
             }
-            String role = requireText(value.role, "symbol role");
-            String provenance = requireText(value.provenance, "symbol provenance");
-            String analysisRule = requireText(value.analysisRule, "symbol analysis rule");
-            StructureDefinition structure = Objects.requireNonNull(value.structure,
-                    "symbol structure").validated(loaders.keySet());
             String digest = YsmSymbolSignatures.sha256("profile-v1|" + id + '|' + kind + '|'
-                    + category + '|' + role + '|' + provenance + '|' + analysisRule);
-            Definition definition = new Definition(id, kind, category, role, provenance,
-                    analysisRule, structure, value.definitionRevision, digest);
+                    + analysisGroup + '|' + value.definitionRevision);
+            Definition definition = new Definition(id, kind, value.definitionRevision, digest);
             if (definitionValues.putIfAbsent(id, definition) != null) {
                 throw new IllegalArgumentException("Duplicate symbol definition: " + id);
             }
         }
-        if (raw.expectedSymbolCount <= 0 || definitionValues.size() != raw.expectedSymbolCount) {
-            throw new IllegalArgumentException("Profile symbol count is "
-                    + definitionValues.size() + ", expected " + raw.expectedSymbolCount);
-        }
         Set<String> builtIns = YsmSymbols.all().stream().map(YsmSymbolKey::id)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        if (!definitionValues.keySet().containsAll(builtIns)) {
+        if (!definitionValues.keySet().equals(builtIns)) {
             Set<String> missing = new java.util.TreeSet<>(builtIns);
             missing.removeAll(definitionValues.keySet());
-            throw new IllegalArgumentException("Profile is missing built-in analyzer roles: "
-                    + missing);
+            Set<String> extra = new java.util.TreeSet<>(definitionValues.keySet());
+            extra.removeAll(builtIns);
+            throw new IllegalArgumentException("Profile symbol mismatch: missing=" + missing
+                    + ", extra=" + extra);
         }
         definitions = Collections.unmodifiableMap(definitionValues);
         this.profileSha256 = profileSha256;
@@ -164,10 +144,6 @@ public final class AnalysisProfile {
         return minecraftVersion;
     }
 
-    public String ysmClassPrefix() {
-        return ysmClassPrefix;
-    }
-
     public LoaderTypes loader(String id) {
         LoaderTypes value = loaders.get(requireText(id, "loader").toLowerCase(Locale.ROOT));
         if (value == null) {
@@ -182,10 +158,6 @@ public final class AnalysisProfile {
 
     public List<String> channelIdentifiers() {
         return channelIdentifiers;
-    }
-
-    public List<Source> sources() {
-        return sources;
     }
 
     public Map<Integer, PacketDefinition> packets() {
@@ -261,14 +233,6 @@ public final class AnalysisProfile {
         return value;
     }
 
-    private static String requireInternalPrefix(String value) {
-        String result = requireText(value, "ysmClassPrefix");
-        if (!result.endsWith("/") || result.startsWith("/") || result.indexOf('.') >= 0) {
-            throw new IllegalArgumentException("Invalid YSM class prefix: " + result);
-        }
-        return result;
-    }
-
     private static <T> List<T> requireList(List<T> values, String label) {
         if (values == null || values.isEmpty()) {
             throw new IllegalArgumentException("Analysis profile has no " + label);
@@ -276,45 +240,11 @@ public final class AnalysisProfile {
         return List.copyOf(values);
     }
 
-    public enum Category {
-        SERVERLESS,
-        EQUIPMENT_DIRECT,
-        EQUIPMENT_RELATED
-    }
-
     public record PacketDefinition(int id, String name, String direction) {
     }
 
-    public record Definition(String id, SymbolKind kind, Category category, String role,
-                             String provenance, String analysisRule,
-                             StructureDefinition structure, int definitionRevision,
+    public record Definition(String id, SymbolKind kind, int definitionRevision,
                              String definitionSha256) {
-    }
-
-    public record Source(String repository, String commit) {
-    }
-
-    public record StructureDefinition(YsmStructureConstraints common,
-                                      Map<String, YsmStructureConstraints> loaders) {
-        private StructureDefinition validated(Set<String> supportedLoaders) {
-            YsmStructureConstraints commonValue = common == null
-                    ? YsmStructureConstraints.EMPTY : common;
-            Map<String, YsmStructureConstraints> loaderValues = new TreeMap<>();
-            if (loaders != null) {
-                loaders.forEach((loader, constraints) -> {
-                    String normalized = requireText(loader, "structure loader")
-                            .toLowerCase(Locale.ROOT);
-                    if (!supportedLoaders.contains(normalized)) {
-                        throw new IllegalArgumentException(
-                                "Structure uses unsupported loader: " + loader);
-                    }
-                    loaderValues.put(normalized,
-                            Objects.requireNonNull(constraints, "loader constraints"));
-                });
-            }
-            return new StructureDefinition(commonValue,
-                    Collections.unmodifiableMap(loaderValues));
-        }
     }
 
     public record LoaderTypes(String livingEntity, String itemStack, String equipmentSlot,
@@ -362,11 +292,8 @@ public final class AnalysisProfile {
     private static final class RawProfile {
         int formatVersion;
         String minecraftVersion;
-        String ysmClassPrefix;
-        int expectedSymbolCount;
         Map<String, LoaderTypes> loaders;
         List<String> channelIdentifiers;
-        List<RawSource> sources;
         List<RawPacket> packets;
         List<RawDefinition> symbols;
     }
@@ -382,17 +309,7 @@ public final class AnalysisProfile {
     private static final class RawDefinition {
         String id;
         String kind;
-        String category;
-        String role;
-        String provenance;
-        String analysisRule;
-        StructureDefinition structure;
         int definitionRevision;
     }
 
-    @SuppressWarnings("unused")
-    private static final class RawSource {
-        String repository;
-        String commit;
-    }
 }

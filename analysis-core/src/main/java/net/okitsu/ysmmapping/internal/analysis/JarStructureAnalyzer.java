@@ -98,8 +98,9 @@ public final class JarStructureAnalyzer {
 
         List<YsmCompatibilityMap.PacketSymbol> packets = profile.packets().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .map(entry -> new YsmCompatibilityMap.PacketSymbol(entry.getKey(), entry.getValue().name(),
-                        entry.getValue().direction(), registration.symbols.get(entry.getKey())))
+                .map(entry -> new YsmCompatibilityMap.PacketSymbol(entry.getKey(),
+                        entry.getValue().name(), entry.getValue().direction(),
+                        registration.symbols.get(entry.getKey())))
                 .toList();
         String channel = findChannel(classes);
         Map<String, ClassNode> classesByName = new HashMap<>();

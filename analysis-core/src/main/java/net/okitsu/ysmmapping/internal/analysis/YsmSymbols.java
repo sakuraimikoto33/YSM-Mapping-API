@@ -9,8 +9,43 @@ import net.okitsu.ysmmapping.api.YsmResolvedSymbol;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class YsmSymbols {
+    private static final Set<String> EQUIPMENT_DIRECT_IDS = Set.of(
+            "ysm.client.animated_model.all_head_bone_getter.method",
+            "ysm.client.animated_model.head_bones_getter.method",
+            "ysm.client.animated_model.right_waist_bones_getter.method",
+            "ysm.client.custom_player.current_model_getter.method",
+            "ysm.client.custom_player.entity_getter.method",
+            "ysm.client.equipment.elytra_item_getter.method",
+            "ysm.client.render_utils.prep_matrix_for_bone.method",
+            "ysm.client.render_utils.prep_matrix_for_locator.method",
+            "ysm.client.renderer.elytra_layer.render.method");
+    private static final Set<String> EQUIPMENT_RELATED_IDS = Set.of(
+            "ysm.client.animated_model.backpack_bones_getter.method",
+            "ysm.client.animated_model.blade_bones_getter.method",
+            "ysm.client.animated_model.elytra_bones_getter.method",
+            "ysm.client.animated_model.left_hand_bones_getter.method",
+            "ysm.client.animated_model.left_shoulder_bones_getter.method",
+            "ysm.client.animated_model.left_waist_bones_getter.method",
+            "ysm.client.animated_model.right_hand_bones_getter.method",
+            "ysm.client.animated_model.right_shoulder_bones_getter.method",
+            "ysm.client.animated_model.sheath_bones_getter.method",
+            "ysm.client.animated_model.tac_pistol_bones_getter.method",
+            "ysm.client.animated_model.tac_rifle_bones_getter.method",
+            "ysm.client.equipment.armor_item_getter.method",
+            "ysm.client.render_utils.rotate_matrix_around_bone.method",
+            "ysm.client.render_utils.scale_matrix_for_bone.method",
+            "ysm.client.render_utils.translate_and_rotate_matrix_for_bone.method",
+            "ysm.client.render_utils.translate_away_from_pivot_point.method",
+            "ysm.client.render_utils.translate_matrix_to_bone.method",
+            "ysm.client.render_utils.translate_to_pivot_point.method",
+            "ysm.client.renderer.armor_layer.render.method",
+            "ysm.client.renderer.backpack_layer.render.method",
+            "ysm.client.renderer.elytra_layer.render_elytra.method",
+            "ysm.client.renderer.item_in_hand_layer.render.method",
+            "ysm.client.renderer.parrot_layer.render.method");
     private static final YsmSymbolRegistry REGISTRY = new YsmSymbolRegistry();
 
     public static final YsmSymbolKey<YsmClassSymbol> REGISTRATION_CLASS =
@@ -206,12 +241,48 @@ public final class YsmSymbols {
         return REGISTRY.all();
     }
 
+    static String analysisGroup(String id) {
+        requireKnown(id);
+        if (EQUIPMENT_DIRECT_IDS.contains(id)) {
+            return "EQUIPMENT_DIRECT";
+        }
+        if (EQUIPMENT_RELATED_IDS.contains(id)) {
+            return "EQUIPMENT_RELATED";
+        }
+        return "SERVERLESS";
+    }
+
+    public static boolean isEquipmentDirect(String id) {
+        requireKnown(id);
+        return EQUIPMENT_DIRECT_IDS.contains(id);
+    }
+
+    public static boolean isEquipmentRelated(String id) {
+        requireKnown(id);
+        return EQUIPMENT_RELATED_IDS.contains(id);
+    }
+
+    public static boolean usesEquipmentAnalyzer(String id) {
+        requireKnown(id);
+        return EQUIPMENT_DIRECT_IDS.contains(id) || EQUIPMENT_RELATED_IDS.contains(id);
+    }
+
+    public static boolean usesServerlessAnalyzer(String id) {
+        return !usesEquipmentAnalyzer(id);
+    }
+
     public static YsmSymbolRegistry registry() {
         return REGISTRY;
     }
 
     private static String packetId(int id) {
         return "ysm.network.packet." + id + ".class";
+    }
+
+    private static void requireKnown(String id) {
+        if (REGISTRY.byId(id).isEmpty()) {
+            throw new IllegalArgumentException("Unknown analysis symbol key: " + id);
+        }
     }
 
     private static YsmSymbolKey<YsmClassSymbol> classKey(String id) {
