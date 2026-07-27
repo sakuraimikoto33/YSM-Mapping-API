@@ -14,6 +14,13 @@ allprojects {
 }
 
 subprojects {
+    pluginManager.withPlugin("java") {
+        dependencies.add(
+            "testRuntimeOnly",
+            "org.junit.platform:junit-platform-launcher:1.11.4"
+        )
+    }
+
     tasks.withType<Jar>().configureEach {
         includeEmptyDirs = false
     }

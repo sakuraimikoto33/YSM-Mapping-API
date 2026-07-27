@@ -1,7 +1,6 @@
 package net.okitsu.ysmmapping.internal.analysis;
 
 import net.okitsu.ysmmapping.api.YsmSymbolSignatures;
-import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
@@ -22,7 +21,6 @@ import org.objectweb.asm.tree.TableSwitchInsnNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,8 +29,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 /** Builds name-independent fingerprints while retaining runtime names only as resolved values. */
 public final class WholeJarStructureAnalyzer {
@@ -61,26 +57,6 @@ public final class WholeJarStructureAnalyzer {
                 .sorted(Comparator.comparing(WholeJarStructureGraph.ClassStructure::runtimeName))
                 .toList();
         return new WholeJarStructureGraph(FINGERPRINT_DEFINITION_SHA256, classes);
-    }
-
-    private static List<ClassNode> readClasses(Path jarPath) throws IOException {
-        List<ClassNode> classes = new ArrayList<>();
-        try (JarFile jar = new JarFile(jarPath.toFile())) {
-            List<JarEntry> entries = jar.stream()
-                    .filter(entry -> !entry.isDirectory()
-                            && entry.getName().startsWith("com/elfmcys/yesstevemodel/")
-                            && entry.getName().endsWith(".class"))
-                    .sorted(Comparator.comparing(JarEntry::getName)).toList();
-            for (JarEntry entry : entries) {
-                try (InputStream input = jar.getInputStream(entry)) {
-                    ClassNode node = new ClassNode();
-                    new ClassReader(input).accept(node,
-                            ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                    classes.add(node);
-                }
-            }
-        }
-        return classes;
     }
 
     private static WholeJarStructureGraph.ClassStructure classStructure(ClassNode node,

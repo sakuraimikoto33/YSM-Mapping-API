@@ -17,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -288,7 +287,6 @@ public final class AnalysisProfile {
         }
     }
 
-    @SuppressWarnings("unused")
     private static final class RawProfile {
         int formatVersion;
         String minecraftVersion;
@@ -298,14 +296,12 @@ public final class AnalysisProfile {
         List<RawDefinition> symbols;
     }
 
-    @SuppressWarnings("unused")
     private static final class RawPacket {
         int id;
         String name;
         String direction;
     }
 
-    @SuppressWarnings("unused")
     private static final class RawDefinition {
         String id;
         String kind;

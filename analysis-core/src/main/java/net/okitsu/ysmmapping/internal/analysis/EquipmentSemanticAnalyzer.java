@@ -2,7 +2,6 @@ package net.okitsu.ysmmapping.internal.analysis;
 
 import net.okitsu.ysmmapping.api.YsmMethodSymbol;
 import net.okitsu.ysmmapping.api.YsmResolvedSymbol;
-import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -14,15 +13,11 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 /** Role-based resolver for the curated equipment/rendering surface. */
 public final class EquipmentSemanticAnalyzer implements Opcodes {
@@ -414,21 +409,6 @@ public final class EquipmentSemanticAnalyzer implements Opcodes {
     }
     private static MethodRef ref(MethodInsnNode method) {
         return new MethodRef(method.owner, method.name, method.desc);
-    }
-
-    private static Map<String, ClassNode> readClasses(Path jarPath) throws IOException {
-        Map<String, ClassNode> classes = new LinkedHashMap<>();
-        try (JarFile jar = new JarFile(jarPath.toFile())) {
-            List<JarEntry> entries = jar.stream().filter(entry -> !entry.isDirectory()
-                    && entry.getName().startsWith(YSM) && entry.getName().endsWith(".class"))
-                    .sorted(java.util.Comparator.comparing(JarEntry::getName)).toList();
-            for (JarEntry entry : entries) try (InputStream input = jar.getInputStream(entry)) {
-                ClassNode node = new ClassNode();
-                new ClassReader(input).accept(node, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                classes.put(node.name, node);
-            }
-        }
-        return classes;
     }
 
     private record MethodRef(String owner, String name, String descriptor) {}
