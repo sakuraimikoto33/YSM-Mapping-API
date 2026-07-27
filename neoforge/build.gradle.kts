@@ -4,6 +4,7 @@ plugins {
 }
 
 val minecraftVersion = providers.gradleProperty("minecraftVersion").get()
+val resourceVersion = rootProject.version.toString()
 
 base {
     archivesName.set("ysm-mapping-api-neoforge-$minecraftVersion")
@@ -50,13 +51,13 @@ tasks.jar {
 }
 
 tasks.processResources {
-    inputs.property("version", project.version)
+    inputs.property("version", resourceVersion)
     inputs.property("minecraftVersion", minecraftVersion)
     inputs.property("neoForgeVersion", providers.gradleProperty("neoForgeVersion").get())
 
     filesMatching("META-INF/neoforge.mods.toml") {
         expand(
-            "version" to project.version,
+            "version" to resourceVersion,
             "minecraftVersion" to minecraftVersion,
             "neoForgeVersion" to providers.gradleProperty("neoForgeVersion").get()
         )

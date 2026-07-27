@@ -5,6 +5,7 @@ plugins {
 }
 
 val minecraftVersion = providers.gradleProperty("minecraftVersion").get()
+val resourceVersion = rootProject.version.toString()
 
 base {
     archivesName.set("ysm-mapping-api-fabric-$minecraftVersion")
@@ -40,12 +41,12 @@ tasks.jar {
 }
 
 tasks.processResources {
-    inputs.property("version", project.version)
+    inputs.property("version", resourceVersion)
     inputs.property("minecraftVersion", minecraftVersion)
 
     filesMatching("fabric.mod.json") {
         expand(
-            "version" to project.version,
+            "version" to resourceVersion,
             "minecraftVersion" to minecraftVersion
         )
     }
