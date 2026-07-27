@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
 
 /** Public-safe description of ignored regression inputs and aggregate expectations. */
@@ -91,7 +90,6 @@ public record FixtureCatalog(String minecraftVersion, List<Fixture> fixtures,
         }
     }
 
-    @SuppressWarnings("unused")
     private static final class RawCatalog {
         int formatVersion;
         String minecraftVersion;
@@ -99,7 +97,6 @@ public record FixtureCatalog(String minecraftVersion, List<Fixture> fixtures,
         Expectations expectations;
     }
 
-    @SuppressWarnings("unused")
     private static final class RawFixture {
         String fileName;
         String ysmVersion;

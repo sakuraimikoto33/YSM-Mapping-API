@@ -4,7 +4,6 @@ import net.okitsu.ysmmapping.api.YsmClassSymbol;
 import net.okitsu.ysmmapping.api.YsmFieldSymbol;
 import net.okitsu.ysmmapping.api.YsmMethodSymbol;
 import net.okitsu.ysmmapping.api.YsmResolvedSymbol;
-import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -21,12 +20,9 @@ import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.ArrayDeque;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -34,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 public final class JarStructureAnalyzer {
     private static final String CLIENT_MODEL_CATALOG_DELTA_DESCRIPTOR =
@@ -1515,51 +1509,6 @@ public final class JarStructureAnalyzer {
             throw new IOException("Missing " + label + ": " + name);
         }
         return node;
-    }
-
-    private static List<ClassNode> readClasses(Path jar) throws IOException {
-        List<ClassNode> classes = new ArrayList<>();
-        if (Files.isDirectory(jar)) {
-            try (var paths = Files.walk(jar)) {
-                for (Path path : paths.filter(Files::isRegularFile)
-                        .filter(path -> path.toString().endsWith(".class"))
-                        .sorted().toList()) {
-                    String relative = jar.relativize(path).toString().replace('\\', '/');
-                    if (!relative.startsWith("com/elfmcys/yesstevemodel/")
-                            || relative.equals("module-info.class")) {
-                        continue;
-                    }
-                    try (InputStream input = Files.newInputStream(path)) {
-                        ClassNode node = new ClassNode();
-                        new ClassReader(input).accept(node,
-                                ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                        classes.add(node);
-                    } catch (RuntimeException exception) {
-                        throw new IOException("Failed to parse " + relative, exception);
-                    }
-                }
-            }
-            return classes;
-        }
-        try (JarFile jarFile = new JarFile(jar.toFile())) {
-            var entries = jarFile.entries();
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-                if (entry.isDirectory() || !entry.getName().endsWith(".class")
-                        || !entry.getName().startsWith("com/elfmcys/yesstevemodel/")
-                        || entry.getName().equals("module-info.class")) {
-                    continue;
-                }
-                try (InputStream input = jarFile.getInputStream(entry)) {
-                    ClassNode node = new ClassNode();
-                    new ClassReader(input).accept(node, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                    classes.add(node);
-                } catch (RuntimeException exception) {
-                    throw new IOException("Failed to parse " + entry.getName(), exception);
-                }
-            }
-        }
-        return classes;
     }
 
     private RegistrationCandidate analyzeRegistration(ClassNode owner, MethodNode method) {

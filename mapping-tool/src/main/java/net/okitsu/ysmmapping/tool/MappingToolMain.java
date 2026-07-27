@@ -10,7 +10,6 @@ import net.okitsu.ysmmapping.internal.analysis.AnalysisProfile;
 import net.okitsu.ysmmapping.internal.analysis.EquipmentSemanticAnalyzer;
 import net.okitsu.ysmmapping.internal.analysis.FixtureCatalog;
 import net.okitsu.ysmmapping.internal.analysis.JarStructureAnalyzer;
-import net.okitsu.ysmmapping.internal.analysis.SymbolMappings;
 import net.okitsu.ysmmapping.internal.analysis.WholeJarStructureAnalyzer;
 import net.okitsu.ysmmapping.internal.analysis.YsmArtifact;
 import net.okitsu.ysmmapping.internal.bootstrap.ContentHashes;

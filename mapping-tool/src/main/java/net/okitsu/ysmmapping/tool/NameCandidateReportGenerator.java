@@ -177,7 +177,6 @@ final class NameCandidateReportGenerator {
                                 Map<String, Object> summary) {
     }
 
-    @SuppressWarnings("unused")
     private static final class RawSpec {
         int formatVersion;
         String minecraftVersion;
@@ -187,7 +186,6 @@ final class NameCandidateReportGenerator {
         List<RawCandidate> candidates;
     }
 
-    @SuppressWarnings("unused")
     private static final class RawCandidate {
         String semanticKey;
         String kind;
@@ -195,10 +193,8 @@ final class NameCandidateReportGenerator {
         SourceReference port;
     }
 
-    @SuppressWarnings("unused")
     private static final class SourceReference {
         String owner;
         String name;
-        String descriptor;
     }
 }
