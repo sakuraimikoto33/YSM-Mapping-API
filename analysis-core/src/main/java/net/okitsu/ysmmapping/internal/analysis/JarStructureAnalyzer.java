@@ -83,7 +83,7 @@ public final class JarStructureAnalyzer {
                 throw new IOException("Packet registration surface is ambiguous; found "
                         + largestCandidates.size() + " equally complete candidates");
             }
-            RegistrationCandidate registration = largestCandidates.getFirst();
+            RegistrationCandidate registration = largestCandidates.get(0);
         if (registration.symbols.size() < targetIds.size()) {
             Set<Integer> missing = new HashSet<>(targetIds);
             missing.removeAll(registration.symbols.keySet());
@@ -307,7 +307,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Packet registration surface is ambiguous; found "
                     + largestCandidates.size() + " equally complete candidates");
         }
-        return largestCandidates.getFirst();
+        return largestCandidates.get(0);
     }
 
     private void recoverFeedback(Map<String, ClassNode> classes,
@@ -585,7 +585,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected packet 15 to contain one feedback payload field, found "
                     + payloadFields.size());
         }
-        FieldNode payloadField = payloadFields.getFirst();
+        FieldNode payloadField = payloadFields.get(0);
         String feedbackName = Type.getType(payloadField.desc).getInternalName();
         ClassNode feedback = requireClass(classes, feedbackName, "packet 15 feedback payload");
 
@@ -597,7 +597,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected feedback payload to contain one String-float variable Map, found "
                     + variableFields.size());
         }
-        FieldNode variablesField = variableFields.getFirst();
+        FieldNode variablesField = variableFields.get(0);
         boolean codecReadsVariables = feedback.methods.stream().anyMatch(method ->
                 Type.getArgumentTypes(method.desc).length >= 2
                         && Type.getArgumentTypes(method.desc)[0].getDescriptor()
@@ -631,7 +631,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected feedback target entity ID to feed one entity lookup, found "
                     + uniqueTargetReads.size());
         }
-        FieldReference target = uniqueTargetReads.getFirst();
+        FieldReference target = uniqueTargetReads.get(0);
         boolean targetDeclared = feedback.fields.stream().anyMatch(field ->
                 (field.access & Opcodes.ACC_STATIC) == 0 && field.name.equals(target.name())
                         && field.desc.equals(target.desc()));
@@ -647,7 +647,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one feedback model/storage key field, found "
                     + modelKeyFields.size());
         }
-        FieldNode modelKey = modelKeyFields.getFirst();
+        FieldNode modelKey = modelKeyFields.get(0);
         boolean codecReadsModelKey = feedback.methods.stream().anyMatch(method ->
                 Type.getArgumentTypes(method.desc).length >= 2
                         && Type.getArgumentTypes(method.desc)[0].getDescriptor()
@@ -682,7 +682,7 @@ public final class JarStructureAnalyzer {
         FieldReference target = findEntityTargetField(packet, packet.name, "animation");
         FieldNode index = integers.stream().filter(field -> !field.name.equals(target.name()))
                 .findFirst().orElseThrow(() -> new IOException("Missing animation index field"));
-        FieldNode pack = strings.getFirst();
+        FieldNode pack = strings.get(0);
         String self = "L" + packet.name + ";";
         boolean writerReadsFields = packet.methods.stream().anyMatch(method ->
                 isStatic(method) && Type.getArgumentTypes(method.desc).length == 2
@@ -707,7 +707,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one ordered animation name accessor, found "
                     + orderedNameCandidates.size());
         }
-        MethodInsnNode orderedName = orderedNameCandidates.getFirst();
+        MethodInsnNode orderedName = orderedNameCandidates.get(0);
         MethodInsnNode orderedCount = uniqueInvocation(invocations,
                 invocation -> invocation.owner.equals(orderedName.owner)
                         && invocation.desc.equals("()I"), "ordered animation count getter");
@@ -819,7 +819,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one " + label + " in " + owner.name
                     + ", found " + matches.size());
         }
-        return matches.getFirst();
+        return matches.get(0);
     }
 
     private static FieldNode uniqueField(ClassNode owner, Predicate<FieldNode> filter,
@@ -829,7 +829,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one " + label + " in " + owner.name
                     + ", found " + matches.size());
         }
-        return matches.getFirst();
+        return matches.get(0);
     }
 
     private static YsmCompatibilityMap.MethodSymbol methodSymbol(ClassNode owner,
@@ -929,7 +929,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one " + label + " target entity field, found "
                     + unique.size());
         }
-        return unique.getFirst();
+        return unique.get(0);
     }
 
     private static MethodInsnNode findStorageKeyGetter(Map<String, ClassNode> classes,
@@ -965,7 +965,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one server model storage key getter, found "
                     + unique.size());
         }
-        return unique.getFirst();
+        return unique.get(0);
     }
 
     private static List<MethodInsnNode> invocationNodes(MethodNode method) {
@@ -989,7 +989,7 @@ public final class JarStructureAnalyzer {
         if (unique.size() != 1) {
             throw new IOException("Expected one " + label + ", found " + unique.size());
         }
-        return unique.getFirst();
+        return unique.get(0);
     }
 
     private static boolean containsInteger(MethodNode method, int value) {
@@ -1048,7 +1048,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one server sync result class, found "
                     + candidates.size());
         }
-        ClassNode result = candidates.getFirst();
+        ClassNode result = candidates.get(0);
         YsmCompatibilityMap.MethodSymbol success = findUniqueDeclared(result,
                 method -> !isStatic(method) && isPublic(method) && method.desc.equals("()Z"),
                 "server sync result success getter");
@@ -1078,7 +1078,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected server model map getter to read one static Map field, found "
                     + reads.size());
         }
-        FieldInsnNode read = reads.getFirst();
+        FieldInsnNode read = reads.get(0);
         var declared = serverManager.fields.stream()
                 .filter(field -> field.name.equals(read.name) && field.desc.equals(read.desc))
                 .findFirst().orElseThrow(() -> new IOException(
@@ -1118,7 +1118,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one " + literal + " config field, found "
                     + unique.size());
         }
-        return unique.getFirst();
+        return unique.get(0);
     }
 
     private static YsmCompatibilityMap.MethodSymbol findClientReset(ClassNode clientManager)
@@ -1254,7 +1254,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected client model catalog delta callback to schedule one "
                     + "catalog helper, found " + lambdas.size());
         }
-        InvokeDynamicInsnNode lambda = lambdas.getFirst();
+        InvokeDynamicInsnNode lambda = lambdas.get(0);
         requireCapturedArguments(lambda, 0, 1, 3, 2);
         Handle implementation = implementationHandle(lambda, clientManager.name);
         MethodNode helper = clientManager.methods.stream()
@@ -1308,7 +1308,7 @@ public final class JarStructureAnalyzer {
         if (getterMaps.size() != 1) {
             throw new IOException("Client model map getter must read exactly one static Map field");
         }
-        FieldReference modelMap = getterMaps.getFirst();
+        FieldReference modelMap = getterMaps.get(0);
         boolean readsModelMap = fieldReads(helper, clientManager.name).stream()
                 .anyMatch(modelMap::equals);
         boolean replacesModelMap = fieldWrites(helper, clientManager.name).stream()
@@ -1558,12 +1558,12 @@ public final class JarStructureAnalyzer {
                 for (AbstractInsnNode instruction : method.instructions) {
                     if (instruction instanceof LdcInsnNode ldc && ldc.cst instanceof String text
                             && profile.channelIdentifiers().contains(text)) {
-                        return profile.channelIdentifiers().getFirst();
+                        return profile.channelIdentifiers().get(0);
                     }
                 }
             }
         }
-        return profile.channelIdentifiers().getFirst();
+        return profile.channelIdentifiers().get(0);
     }
 
     private static MethodReference findUniqueInvokedMethod(ClassNode node,
@@ -1580,7 +1580,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one " + label + " in " + node.name
                     + ", found " + matches.size());
         }
-        return matches.getFirst();
+        return matches.get(0);
     }
 
     private static YsmCompatibilityMap.MethodSymbol findDeclared(ClassNode owner,
@@ -1605,7 +1605,7 @@ public final class JarStructureAnalyzer {
             throw new IOException("Expected one " + label + " in " + owner.name
                     + ", found " + matches.size());
         }
-        MethodNode method = matches.getFirst();
+        MethodNode method = matches.get(0);
         return new YsmCompatibilityMap.MethodSymbol(owner.name, method.name, method.desc);
     }
 

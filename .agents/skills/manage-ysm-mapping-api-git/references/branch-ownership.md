@@ -8,7 +8,7 @@ Commit repository instructions, `.agents/`, `.gitignore`, Gradle wrapper files, 
 
 ## Minecraft branches
 
-Commit `api/`, `common/`, `fabric/`, `neoforge/`, Minecraft-specific documentation, mapping profiles and fixture expectations, loader integration, and Minecraft-specific configuration on the matching `mc/<minecraft-version>` branch.
+Commit `api/`, `common/`, `fabric/`, `forge/`, `neoforge/`, Minecraft-specific documentation, mapping profiles and fixture expectations, loader integration, and Minecraft-specific configuration on the matching `mc/<minecraft-version>` branch.
 
 ## Mixed files
 

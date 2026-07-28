@@ -87,7 +87,7 @@ class AnalysisProfileTest {
             boolean includeAll) {
         List<Map<String, Object>> symbols = new ArrayList<>();
         List<YsmSymbolKey<?>> keys = new ArrayList<>(YsmSymbols.all());
-        if (!includeAll) keys.removeLast();
+        if (!includeAll) keys.remove(keys.size() - 1);
         for (YsmSymbolKey<?> key : keys) {
             symbols.add(Map.of(
                     "id", key.id(),

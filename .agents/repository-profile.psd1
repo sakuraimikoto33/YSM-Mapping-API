@@ -15,6 +15,7 @@
         "api"
         "common"
         "fabric"
+        "forge"
         "neoforge"
     )
     MixedPaths = @(

@@ -184,7 +184,7 @@ public final class EquipmentSemanticAnalyzer implements Opcodes {
             owner.methods.stream().filter(method -> method.desc.equals(template.descriptor))
                     .map(method -> ref(owner, method)).forEach(matches::add);
         }
-        return matches.size() == 1 ? matches.getFirst() : null;
+        return matches.size() == 1 ? matches.get(0) : null;
     }
 
     private static MethodRef findPrepBone(Map<String, ClassNode> classes, MethodRef prep,
@@ -272,7 +272,7 @@ public final class EquipmentSemanticAnalyzer implements Opcodes {
                 .filter(method -> method.desc.equals("()" + fieldDescriptor)
                         && referencesField(method, owner.name, fieldName, fieldDescriptor))
                 .map(method -> ref(owner, method)).toList();
-        return matches.size() == 1 ? matches.getFirst() : null;
+        return matches.size() == 1 ? matches.get(0) : null;
     }
 
     private static String staticIntForString(ClassNode owner, String value) {
@@ -315,7 +315,7 @@ public final class EquipmentSemanticAnalyzer implements Opcodes {
         List<MethodRef> matches = new ArrayList<>();
         for (ClassNode owner : classes.values()) owner.methods.stream().filter(test)
                 .map(method -> ref(owner, method)).forEach(matches::add);
-        return matches.size() == 1 ? matches.getFirst() : null;
+        return matches.size() == 1 ? matches.get(0) : null;
     }
 
     private static MethodRef uniqueInOwner(Map<String, ClassNode> classes, String owner,
@@ -324,7 +324,7 @@ public final class EquipmentSemanticAnalyzer implements Opcodes {
         if (node == null) return null;
         List<MethodRef> matches = node.methods.stream().filter(test)
                 .map(method -> ref(node, method)).toList();
-        return matches.size() == 1 ? matches.getFirst() : null;
+        return matches.size() == 1 ? matches.get(0) : null;
     }
 
     private static ClassNode methodOwner(Map<String, ClassNode> classes, MethodNode method) {
