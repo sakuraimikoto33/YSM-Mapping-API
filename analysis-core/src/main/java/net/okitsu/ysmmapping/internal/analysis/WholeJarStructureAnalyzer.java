@@ -124,49 +124,46 @@ public final class WholeJarStructureAnalyzer {
             } else {
                 continue;
             }
-            switch (instruction) {
-                case IntInsnNode value -> opcodes.append(':').append(value.operand);
-                case TypeInsnNode value -> {
-                    opcodes.append(':').append(typeShape(value.desc, internal));
-                    addExternal(external, value.desc, internal);
+            if (instruction instanceof IntInsnNode value) {
+                opcodes.append(':').append(value.operand);
+            } else if (instruction instanceof TypeInsnNode value) {
+                opcodes.append(':').append(typeShape(value.desc, internal));
+                addExternal(external, value.desc, internal);
+            } else if (instruction instanceof FieldInsnNode value) {
+                String reference = memberReference(value.owner, value.name, value.desc,
+                        internal, false);
+                fields.add(reference);
+                opcodes.append(':').append(reference);
+                addExternal(external, value.owner, internal);
+                addDescriptorExternals(external, value.desc, internal);
+            } else if (instruction instanceof MethodInsnNode value) {
+                String reference = memberReference(value.owner, value.name, value.desc,
+                        internal, true);
+                calls.add(reference);
+                opcodes.append(':').append(reference);
+                addExternal(external, value.owner, internal);
+                addDescriptorExternals(external, value.desc, internal);
+            } else if (instruction instanceof InvokeDynamicInsnNode value) {
+                String dynamic = "indy|" + descriptorShape(value.desc, internal) + '|'
+                        + handleShape(value.bsm, internal);
+                opcodes.append(':').append(dynamic);
+                calls.add(dynamic);
+                for (Object argument : value.bsmArgs) {
+                    constants.add(constantDigest(argument, internal));
                 }
-                case FieldInsnNode value -> {
-                    String reference = memberReference(value.owner, value.name, value.desc,
-                            internal, false);
-                    fields.add(reference);
-                    opcodes.append(':').append(reference);
-                    addExternal(external, value.owner, internal);
-                    addDescriptorExternals(external, value.desc, internal);
-                }
-                case MethodInsnNode value -> {
-                    String reference = memberReference(value.owner, value.name, value.desc,
-                            internal, true);
-                    calls.add(reference);
-                    opcodes.append(':').append(reference);
-                    addExternal(external, value.owner, internal);
-                    addDescriptorExternals(external, value.desc, internal);
-                }
-                case InvokeDynamicInsnNode value -> {
-                    String dynamic = "indy|" + descriptorShape(value.desc, internal) + '|'
-                            + handleShape(value.bsm, internal);
-                    opcodes.append(':').append(dynamic);
-                    calls.add(dynamic);
-                    for (Object argument : value.bsmArgs) {
-                        constants.add(constantDigest(argument, internal));
-                    }
-                }
-                case LdcInsnNode value -> constants.add(constantDigest(value.cst, internal));
-                case IincInsnNode value -> opcodes.append(':').append(value.incr);
-                case MultiANewArrayInsnNode value -> opcodes.append(':')
-                        .append(descriptorShape(value.desc, internal)).append(':')
+            } else if (instruction instanceof LdcInsnNode value) {
+                constants.add(constantDigest(value.cst, internal));
+            } else if (instruction instanceof IincInsnNode value) {
+                opcodes.append(':').append(value.incr);
+            } else if (instruction instanceof MultiANewArrayInsnNode value) {
+                opcodes.append(':').append(descriptorShape(value.desc, internal)).append(':')
                         .append(value.dims);
-                case TableSwitchInsnNode value -> opcodes.append(':').append(value.min)
-                        .append(':').append(value.max);
-                case LookupSwitchInsnNode value -> opcodes.append(':')
-                        .append(value.keys == null ? 0 : value.keys.hashCode());
-                case JumpInsnNode ignored -> opcodes.append(":jump");
-                default -> {
-                }
+            } else if (instruction instanceof TableSwitchInsnNode value) {
+                opcodes.append(':').append(value.min).append(':').append(value.max);
+            } else if (instruction instanceof LookupSwitchInsnNode value) {
+                opcodes.append(':').append(value.keys == null ? 0 : value.keys.hashCode());
+            } else if (instruction instanceof JumpInsnNode) {
+                opcodes.append(":jump");
             }
             opcodes.append(';');
         }
@@ -199,14 +196,18 @@ public final class WholeJarStructureAnalyzer {
     }
 
     private static String constantDigest(Object value, Set<String> internal) {
-        String shape = switch (value) {
-            case Type type -> "type:" + descriptorShape(type.getDescriptor(), internal);
-            case Handle handle -> "handle:" + handleShape(handle, internal);
-            case ConstantDynamic dynamic -> "dynamic:" + dynamic.getName() + ':'
+        String shape;
+        if (value instanceof Type type) {
+            shape = "type:" + descriptorShape(type.getDescriptor(), internal);
+        } else if (value instanceof Handle handle) {
+            shape = "handle:" + handleShape(handle, internal);
+        } else if (value instanceof ConstantDynamic dynamic) {
+            shape = "dynamic:" + dynamic.getName() + ':'
                     + descriptorShape(dynamic.getDescriptor(), internal) + ':'
                     + handleShape(dynamic.getBootstrapMethod(), internal);
-            default -> value.getClass().getName() + ':' + value;
-        };
+        } else {
+            shape = value.getClass().getName() + ':' + value;
+        }
         return YsmSymbolSignatures.sha256(shape);
     }
 
