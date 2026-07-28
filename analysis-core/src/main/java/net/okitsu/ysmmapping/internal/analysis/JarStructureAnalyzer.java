@@ -1473,14 +1473,25 @@ public final class JarStructureAnalyzer {
 
     private boolean isClientHandler(MethodNode method, String self) {
         Type[] arguments = Type.getArgumentTypes(method.desc);
-        if ((method.access & Opcodes.ACC_STATIC) == 0 || arguments.length != 3
-                || !arguments[0].getDescriptor().equals(self)
-                || !Type.getReturnType(method.desc).equals(Type.VOID_TYPE)) {
+        if ((method.access & Opcodes.ACC_STATIC) == 0
+                || !Type.getReturnType(method.desc).equals(Type.VOID_TYPE)
+                || arguments.length == 0 || !arguments[0].getDescriptor().equals(self)) {
+            return false;
+        }
+        if (isForgeSupplierClientHandler(arguments)) {
+            return true;
+        }
+        if (arguments.length != 3) {
             return false;
         }
         String player = arguments[1].getInternalName();
         String connection = arguments[2].getInternalName();
         return playerTypes.contains(player) && connectionTypes.contains(connection);
+    }
+
+    static boolean isForgeSupplierClientHandler(Type[] arguments) {
+        return arguments.length == 2
+                && arguments[1].equals(Type.getType(java.util.function.Supplier.class));
     }
 
     private static void requireConstructor(Map<String, ClassNode> classes, Map<Integer, String> packets,
