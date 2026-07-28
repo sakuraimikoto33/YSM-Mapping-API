@@ -10,7 +10,8 @@ public record YsmArtifact(String id, String minecraftVersion, String loader,
         loader = requireText(loader, "loader").toLowerCase(Locale.ROOT);
         ysmVersion = requireText(ysmVersion, "ysmVersion");
         sha512 = requireText(sha512, "sha512").toLowerCase(Locale.ROOT);
-        if (!loader.equals("fabric") && !loader.equals("neoforge")) {
+        if (!loader.equals("fabric") && !loader.equals("forge")
+                && !loader.equals("neoforge")) {
             throw new IllegalArgumentException("Unsupported loader: " + loader);
         }
         if (!sha512.matches("[0-9a-f]{128}")) {
