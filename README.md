@@ -4,9 +4,9 @@ YSM Mapping APIは、Yes Steve Model（YSM）のclass、method、fieldを構造�
 
 `main`ではMinecraftやloaderに依存しない共有実装を管理します。
 
-- `api-core`: Java 17互換の公開型と解決結果
-- `analysis-core`: Java 17互換のbytecodeとprofile解析
-- `mapping-tool`: Java 21で動作するローカル検証用CLI
+- `api-core`: 公開型と解決結果
+- `analysis-core`: bytecodeとprofileの解析
+- `mapping-tool`: ローカル検証用CLI
 
 Minecraft固有のprofile、runtime、loader統合は`mc/<minecraft-version>`ブランチで管理します。
 
