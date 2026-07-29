@@ -7,8 +7,12 @@ base {
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
     withSourcesJar()
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(17)
 }
 
 val embeddedCore by configurations.creating {

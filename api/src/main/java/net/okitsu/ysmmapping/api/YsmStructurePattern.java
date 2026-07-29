@@ -6,7 +6,7 @@ import java.util.Objects;
 /** Common structural definition plus optional loader-specific refinements. */
 public record YsmStructurePattern(YsmStructureConstraints common,
                                   YsmStructureConstraints fabric,
-                                  YsmStructureConstraints neoforge) {
+                                  YsmStructureConstraints forge) {
     public YsmStructurePattern {
         Objects.requireNonNull(common, "common");
     }
@@ -18,14 +18,14 @@ public record YsmStructurePattern(YsmStructureConstraints common,
     public YsmStructureConstraints refinement(String loader) {
         return switch (Objects.requireNonNull(loader, "loader").toLowerCase(Locale.ROOT)) {
             case "fabric" -> fabric == null ? YsmStructureConstraints.EMPTY : fabric;
-            case "neoforge" -> neoforge == null ? YsmStructureConstraints.EMPTY : neoforge;
+            case "forge" -> forge == null ? YsmStructureConstraints.EMPTY : forge;
             default -> throw new IllegalArgumentException("Unsupported loader: " + loader);
         };
     }
 
     String canonicalForm() {
         return "common{" + common.canonicalForm() + "}|fabric{"
-                + (fabric == null ? "" : fabric.canonicalForm()) + "}|neoforge{"
-                + (neoforge == null ? "" : neoforge.canonicalForm()) + '}';
+                + (fabric == null ? "" : fabric.canonicalForm()) + "}|forge{"
+                + (forge == null ? "" : forge.canonicalForm()) + '}';
     }
 }

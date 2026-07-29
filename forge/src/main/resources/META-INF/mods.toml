@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[1,)"
+loaderVersion="[47,)"
 license="Not specified"
 
 [[mods]]
@@ -9,25 +9,22 @@ displayName="YSM Mapping API"
 description='''Runtime structural mappings for Yes Steve Model consumers.'''
 
 [[dependencies.ysm_mapping_api]]
-modId="neoforge"
-type="required"
-versionRange="[${neoForgeVersion},)"
+modId="forge"
+mandatory=true
+versionRange="[${forgeVersion},)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.ysm_mapping_api]]
 modId="minecraft"
-type="required"
+mandatory=true
 versionRange="[${minecraftVersion}]"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.ysm_mapping_api]]
 modId="yes_steve_model"
-type="required"
+mandatory=true
 versionRange="[2.6.0,)"
 ordering="AFTER"
 side="BOTH"
-
-[[mixins]]
-config="ysm_mapping_api.mixins.json"

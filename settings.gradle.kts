@@ -1,7 +1,7 @@
 pluginManagement {
     repositories {
         maven("https://maven.fabricmc.net/")
-        maven("https://maven.neoforged.net/releases")
+        maven("https://maven.minecraftforge.net/")
         gradlePluginPortal()
         mavenCentral()
     }
@@ -12,7 +12,7 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         maven("https://maven.fabricmc.net/")
-        maven("https://maven.neoforged.net/releases")
+        maven("https://maven.minecraftforge.net/")
         maven("https://repo.spongepowered.org/repository/maven-public/")
     }
 }
@@ -27,5 +27,5 @@ if (providers.gradleProperty("sharedOnly").orNull != "true") {
     include("api")
     include("common")
     include("fabric")
-    include("neoforge")
+    include("forge")
 }

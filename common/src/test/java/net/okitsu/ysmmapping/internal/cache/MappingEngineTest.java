@@ -118,7 +118,7 @@ class MappingEngineTest {
                   "fingerprintDefinitionSha256":"%s",
                   "resolutionPolicy":"SAFE_ONLY",
                   "target":{
-                    "minecraftVersion":"1.21.1","loader":"fabric",
+                    "minecraftVersion":"1.20.1","loader":"fabric",
                     "ysmVersion":"2.6.0","contentSha512":"%s"
                   },
                   "entries":{},"consumers":{}
@@ -240,7 +240,7 @@ class MappingEngineTest {
     void resolvedJsonMatchesThePublicShapeWithoutNestedConfidence() throws Exception {
         Path directory = temporary.resolve("shape");
         MappingsDocument document = MappingsDocument.fresh(new MappingTarget(
-                "1.21.1", "fabric", "2.6.0", "a".repeat(128)),
+                "1.20.1", "fabric", "2.6.0", "a".repeat(128)),
                 ResolutionPolicy.SAFE_ONLY, "b".repeat(64), "c".repeat(64));
         document.entries.put(YsmSymbols.REGISTRATION_CLASS.id(),
                 MappingsDocument.EntryJson.resolved(YsmSymbols.REGISTRATION_CLASS,
@@ -261,7 +261,7 @@ class MappingEngineTest {
                 new MappingCandidate(new YsmFieldSymbol("example/First", "flags", "S"), 0.84),
                 new MappingCandidate(new YsmFieldSymbol("example/Second", "flags", "S"), 0.81));
         MappingsDocument safe = MappingsDocument.fresh(new MappingTarget(
-                "1.21.1", "fabric", "future", "c".repeat(128)),
+                "1.20.1", "fabric", "future", "c".repeat(128)),
                 ResolutionPolicy.SAFE_ONLY, "b".repeat(64), "c".repeat(64));
         safe.entries.put(YsmSymbols.PLAYER_STATE_FLAGS_FIELD.id(),
                 MappingsDocument.EntryJson.candidates(YsmSymbols.PLAYER_STATE_FLAGS_FIELD,
@@ -275,7 +275,7 @@ class MappingEngineTest {
         assertEquals(2, safeEntry.candidates().size());
 
         MappingsDocument bestEffort = MappingsDocument.fresh(new MappingTarget(
-                "1.21.1", "fabric", "future", "c".repeat(128)),
+                "1.20.1", "fabric", "future", "c".repeat(128)),
                 ResolutionPolicy.BEST_EFFORT, "b".repeat(64), "c".repeat(64));
         bestEffort.entries.put(YsmSymbols.PLAYER_STATE_FLAGS_FIELD.id(),
                 MappingsDocument.EntryJson.candidates(YsmSymbols.PLAYER_STATE_FLAGS_FIELD,
@@ -285,7 +285,7 @@ class MappingEngineTest {
                 YsmSymbols.PLAYER_STATE_FLAGS_FIELD)).entries().get(
                 YsmSymbols.PLAYER_STATE_FLAGS_FIELD.id());
         assertEquals(ResolutionStatus.BEST_EFFORT, bestEntry.status());
-        assertEquals(candidates.getFirst().symbol(), bestEntry.resolved());
+        assertEquals(candidates.get(0).symbol(), bestEntry.resolved());
         assertEquals(0.84, bestEntry.confidence());
     }
 
@@ -295,7 +295,8 @@ class MappingEngineTest {
         Path config = temporary.resolve("concurrent-config");
         FakePlatform platform = new FakePlatform(jar, config, "2.6.99");
         CountDownLatch start = new CountDownLatch(1);
-        try (var executor = Executors.newFixedThreadPool(2)) {
+        var executor = Executors.newFixedThreadPool(2);
+        try {
             var first = executor.submit(() -> {
                 start.await();
                 return new MappingEngine(platform, Map.of("alpha_mod",
@@ -309,6 +310,8 @@ class MappingEngineTest {
             start.countDown();
             first.get();
             second.get();
+        } finally {
+            executor.shutdownNow();
         }
 
         JsonObject consumers = read(config.resolve("ysm_mapping_api/mappings.json"))
@@ -353,7 +356,7 @@ class MappingEngineTest {
 
         @Override
         public YsmInstallation ysmInstallation() {
-            return new YsmInstallation("1.21.1", loader(), ysmVersion, source);
+            return new YsmInstallation("1.20.1", loader(), ysmVersion, source);
         }
 
         @Override

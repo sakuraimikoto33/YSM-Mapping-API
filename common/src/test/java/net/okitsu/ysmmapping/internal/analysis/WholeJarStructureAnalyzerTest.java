@@ -56,8 +56,8 @@ class WholeJarStructureAnalyzerTest {
         WholeJarStructureGraph right = new WholeJarStructureAnalyzer().analyze(jar("right.jar",
                 List.of(clazz("com/elfmcys/yesstevemodel/B", "g", "n", 2))));
 
-        var leftClass = left.classes().getFirst();
-        var rightClass = right.classes().getFirst();
+        var leftClass = left.classes().get(0);
+        var rightClass = right.classes().get(0);
         assertNotEquals(leftClass.fingerprint(), rightClass.fingerprint());
         assertNotEquals(method(leftClass).constantDigest(), method(rightClass).constantDigest());
     }

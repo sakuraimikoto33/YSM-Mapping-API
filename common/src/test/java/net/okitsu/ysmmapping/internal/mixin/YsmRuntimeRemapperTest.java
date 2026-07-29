@@ -41,7 +41,7 @@ class YsmRuntimeRemapperTest {
                 YsmSymbols.SERVER_MODEL_STREAM_CALLBACK, ResolutionStatus.STRUCTURAL, 1.0,
                 new YsmMethodSymbol(targetOwner, "renamedCallback", targetDescriptor),
                 List.of(), null));
-        MappingSnapshot snapshot = new MappingSnapshot(new MappingTarget("1.21.1", "fabric",
+        MappingSnapshot snapshot = new MappingSnapshot(new MappingTarget("1.20.1", "fabric",
                 "future", "b".repeat(128)), entries);
         RequestManifest manifest = new RequestManifest(Map.of(
                 YsmSymbols.REGISTRATION_CLASS, true,

@@ -10,7 +10,7 @@ import net.okitsu.ysmmapping.api.YsmMethodSymbol;
 import net.okitsu.ysmmapping.api.YsmResolvedSymbol;
 import net.okitsu.ysmmapping.api.YsmSymbolKey;
 import net.okitsu.ysmmapping.api.YsmSourceAlias;
-import net.okitsu.ysmmapping.api.mixin.YsmMappingReferenceMapper;
+import net.okitsu.ysmmapping.api.mixin.YsmRuntimeMappings;
 import net.okitsu.ysmmapping.internal.bootstrap.RequestManifest;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
@@ -62,7 +62,7 @@ public final class YsmRuntimeRemapper implements IRemapper {
         if (!INSTALLED.compareAndSet(false, true)) {
             return;
         }
-        YsmMappingReferenceMapper.installRuntimeMappings(remapper::map, remapper::mapReference);
+        YsmRuntimeMappings.install(remapper::map, remapper::mapReference);
         MixinEnvironment defaults = MixinEnvironment.getDefaultEnvironment();
         defaults.getRemappers().add(remapper);
         MixinEnvironment current = MixinEnvironment.getCurrentEnvironment();

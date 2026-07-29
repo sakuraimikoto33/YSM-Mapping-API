@@ -64,7 +64,7 @@ public record RequestManifest(Map<YsmSymbolKey<?>, Boolean> symbols,
         }
         String normalizedLoader = Objects.requireNonNull(loader, "loader")
                 .toLowerCase(java.util.Locale.ROOT);
-        if (!normalizedLoader.equals("fabric") && !normalizedLoader.equals("neoforge")) {
+        if (!normalizedLoader.equals("fabric") && !normalizedLoader.equals("forge")) {
             throw invalid(source, "Unsupported loader " + loader, null);
         }
 
@@ -159,8 +159,8 @@ public record RequestManifest(Map<YsmSymbolKey<?>, Boolean> symbols,
                     constraints(requested.definition.common),
                     requested.definition.fabric == null ? null
                             : constraints(requested.definition.fabric),
-                    requested.definition.neoforge == null ? null
-                            : constraints(requested.definition.neoforge));
+                    requested.definition.forge == null ? null
+                            : constraints(requested.definition.forge));
             return switch (kind) {
                 case CLASS -> YsmSymbolKey.consumerClass(requested.key, alias, pattern);
                 case METHOD -> YsmSymbolKey.consumerMethod(requested.key, alias, pattern);
@@ -176,7 +176,7 @@ public record RequestManifest(Map<YsmSymbolKey<?>, Boolean> symbols,
         if (source.common == null) {
             throw new IllegalArgumentException("sourceAlias.common is required");
         }
-        SourceAliasJson override = loader.equals("fabric") ? source.fabric : source.neoforge;
+        SourceAliasJson override = loader.equals("fabric") ? source.fabric : source.forge;
         String owner = override(override == null ? null : override.owner, source.common.owner);
         String name = override(override == null ? null : override.name, source.common.name);
         String descriptor = override(override == null ? null : override.descriptor,
@@ -288,7 +288,7 @@ public record RequestManifest(Map<YsmSymbolKey<?>, Boolean> symbols,
     private static final class SourceAliasSetJson {
         private SourceAliasJson common;
         private SourceAliasJson fabric;
-        private SourceAliasJson neoforge;
+        private SourceAliasJson forge;
     }
     private static final class SourceAliasJson {
         private String owner;
@@ -298,7 +298,7 @@ public record RequestManifest(Map<YsmSymbolKey<?>, Boolean> symbols,
     private static final class DefinitionJson {
         private ConstraintsJson common;
         private ConstraintsJson fabric;
-        private ConstraintsJson neoforge;
+        private ConstraintsJson forge;
     }
     private static final class ConstraintsJson {
         private Integer requiredAccess;

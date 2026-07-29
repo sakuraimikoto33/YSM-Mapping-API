@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "minecraftVersion": "1.21.1",
+  "minecraftVersion": "1.20.1",
   "loaders": {
     "fabric": {
       "livingEntity": "net/minecraft/class_1309",
@@ -24,7 +24,7 @@
         "net/minecraft/class_2561"
       ]
     },
-    "neoforge": {
+    "forge": {
       "livingEntity": "net/minecraft/world/entity/LivingEntity",
       "itemStack": "net/minecraft/world/item/ItemStack",
       "equipmentSlot": "net/minecraft/world/entity/EquipmentSlot",

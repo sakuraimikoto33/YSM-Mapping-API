@@ -4,9 +4,9 @@ YSM Mapping APIは、導入済みYes Steve Model（YSM）の難読化されたcl
 
 ## 対応環境
 
-- Java 21
-- Minecraft 1.21.1
-- FabricまたはNeoForge
+- Java 17
+- Minecraft 1.20.1
+- FabricまたはForge
 - Yes Steve Model 2.6.0以上
 
 解析はローカルで完結し、ネット照会やYSMの自動ダウンロードは行いません。一意に検証できないsymbolは返さず、最後に正常解析したYSMだけをキャッシュします。
@@ -39,8 +39,8 @@ YSM Mapping APIは、導入済みYes Steve Model（YSM）の難読化されたcl
           "name": "send",
           "descriptor": "(Ljava/nio/ByteBuffer;)V"
         },
-        "neoforge": {
-          "name": "sendNeoForge"
+        "forge": {
+          "name": "sendForge"
         }
       }
     },
@@ -61,7 +61,7 @@ YSM Mapping APIは、導入済みYes Steve Model（YSM）の難読化されたcl
 
 初期化後に`YsmMappingApi.resolve(consumerModId, symbolKeys)`を呼び、返された`MappingSnapshot`から必要なsymbolを取得します。組み込みsemantic keyは`YsmSymbols.registry()`で参照できます。独自keyは`consumerClass`、`consumerMethod`、`consumerField`でconsumerごとに定義してください。
 
-Mixinでsymbolを使用する場合は、Mixin configへpluginとruntime refmap wrapperを設定し、対象symbolに`sourceAlias`を指定します。`common`に完全なaliasを記述し、`fabric`または`neoforge`では指定したフィールドだけを上書きできます。上の例ではNeoForgeの`name`だけが`sendNeoForge`になり、`owner`と`descriptor`は`common`から継承されます。
+Mixinでsymbolを使用する場合は、Mixin configへpluginとruntime refmap wrapperを設定し、対象symbolに`sourceAlias`を指定します。`common`に完全なaliasを記述し、`fabric`または`forge`では指定したフィールドだけを上書きできます。上の例ではForgeの`name`だけが`sendForge`になり、`owner`と`descriptor`は`common`から継承されます。
 
 `YsmMappingApi.resolve`の結果をReflectionやMethodHandleなどから使うだけのcurated keyには`sourceAlias`は不要です。上の`ysm.client.model_manager.start_sync.method`のように`sourceAlias`を省略し、`mixinRequirements`にも含めません。
 
@@ -91,7 +91,7 @@ config/ysm_mapping_api/
 - `api-core`: 共通の公開型
 - `analysis-core`: bytecodeと構造の解析
 - `api`、`common`: Minecraft向けAPIとruntime
-- `fabric`、`neoforge`: loader統合
+- `fabric`、`forge`: loader統合
 - `mapping-tool`: ローカルfixture検証用CLI
 
 ## 開発

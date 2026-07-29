@@ -9,9 +9,6 @@ import java.util.function.UnaryOperator;
 
 /** Runtime refmap wrapper used by consumer mixin configs for YSM references. */
 public class YsmMappingReferenceMapper implements IReferenceMapper, IClassReferenceMapper {
-    private static volatile UnaryOperator<String> classMapper = UnaryOperator.identity();
-    private static volatile UnaryOperator<String> referenceMapper = UnaryOperator.identity();
-
     private final IReferenceMapper delegate;
 
     public YsmMappingReferenceMapper(MixinEnvironment environment, IReferenceMapper delegate) {
@@ -22,8 +19,7 @@ public class YsmMappingReferenceMapper implements IReferenceMapper, IClassRefere
     /** Called by the prerequisite bootstrap before consumer mixin targets are parsed. */
     public static synchronized void installRuntimeMappings(UnaryOperator<String> classes,
                                                            UnaryOperator<String> references) {
-        classMapper = Objects.requireNonNull(classes, "classes");
-        referenceMapper = Objects.requireNonNull(references, "references");
+        YsmRuntimeMappings.install(classes, references);
     }
 
     @Override
@@ -53,20 +49,20 @@ public class YsmMappingReferenceMapper implements IReferenceMapper, IClassRefere
 
     @Override
     public String remap(String className, String reference) {
-        String mapped = referenceMapper.apply(reference);
+        String mapped = YsmRuntimeMappings.mapReference(reference);
         return mapped.equals(reference) ? delegate.remap(className, reference) : mapped;
     }
 
     @Override
     public String remapWithContext(String context, String className, String reference) {
-        String mapped = referenceMapper.apply(reference);
+        String mapped = YsmRuntimeMappings.mapReference(reference);
         return mapped.equals(reference)
                 ? delegate.remapWithContext(context, className, reference) : mapped;
     }
 
     @Override
     public String remapClassName(String className, String inputClassName) {
-        String mapped = classMapper.apply(inputClassName);
+        String mapped = YsmRuntimeMappings.mapClass(inputClassName);
         if (!mapped.equals(inputClassName)) {
             return mapped;
         }
@@ -79,7 +75,7 @@ public class YsmMappingReferenceMapper implements IReferenceMapper, IClassRefere
     @Override
     public String remapClassNameWithContext(String context, String className,
                                             String inputClassName) {
-        String mapped = classMapper.apply(inputClassName);
+        String mapped = YsmRuntimeMappings.mapClass(inputClassName);
         if (!mapped.equals(inputClassName)) {
             return mapped;
         }

@@ -126,7 +126,7 @@ final class JarStructureAnalyzerTest {
     }
 
     private static JarStructureAnalyzer analyzer() throws IOException {
-        return new JarStructureAnalyzer(CuratedDefinitionRegistry.load("1.21.1"));
+        return new JarStructureAnalyzer(CuratedDefinitionRegistry.load("1.20.1"));
     }
 
     private static Fixture fixture(boolean entityLookup) {

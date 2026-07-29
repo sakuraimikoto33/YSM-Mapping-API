@@ -1,66 +1,66 @@
 {
   "formatVersion": 1,
-  "minecraftVersion": "1.21.1",
+  "minecraftVersion": "1.20.1",
   "fixtures": [
     {
-      "fileName": "ysm-2.6.0-fabric+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.0-fabric+mc1.20.1-release.jar",
       "ysmVersion": "2.6.0",
       "loader": "fabric"
     },
     {
-      "fileName": "ysm-2.6.0-neoforge+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.0-forge+mc1.20.1-release.jar",
       "ysmVersion": "2.6.0",
-      "loader": "neoforge"
+      "loader": "forge"
     },
     {
-      "fileName": "ysm-2.6.1-fabric+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.1-fabric+mc1.20.1-release.jar",
       "ysmVersion": "2.6.1",
       "loader": "fabric"
     },
     {
-      "fileName": "ysm-2.6.1-neoforge+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.1-forge+mc1.20.1-release.jar",
       "ysmVersion": "2.6.1",
-      "loader": "neoforge"
+      "loader": "forge"
     },
     {
-      "fileName": "ysm-2.6.2-fabric+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.2-fabric+mc1.20.1-release.jar",
       "ysmVersion": "2.6.2",
       "loader": "fabric"
     },
     {
-      "fileName": "ysm-2.6.2-neoforge+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.2-forge+mc1.20.1-release.jar",
       "ysmVersion": "2.6.2",
-      "loader": "neoforge"
+      "loader": "forge"
     },
     {
-      "fileName": "ysm-2.6.3-fabric+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.3-fabric+mc1.20.1-release.jar",
       "ysmVersion": "2.6.3",
       "loader": "fabric"
     },
     {
-      "fileName": "ysm-2.6.3-neoforge+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.3-forge+mc1.20.1-release.jar",
       "ysmVersion": "2.6.3",
-      "loader": "neoforge"
+      "loader": "forge"
     },
     {
-      "fileName": "ysm-2.6.4-fabric+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.4-fabric+mc1.20.1-release.jar",
       "ysmVersion": "2.6.4",
       "loader": "fabric"
     },
     {
-      "fileName": "ysm-2.6.4-neoforge+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.4-forge+mc1.20.1-release.jar",
       "ysmVersion": "2.6.4",
-      "loader": "neoforge"
+      "loader": "forge"
     },
     {
-      "fileName": "ysm-2.6.5-fabric+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.5-fabric+mc1.20.1-release.jar",
       "ysmVersion": "2.6.5",
       "loader": "fabric"
     },
     {
-      "fileName": "ysm-2.6.5-neoforge+mc1.21.1-release.jar",
+      "fileName": "ysm-2.6.5-forge+mc1.20.1-release.jar",
       "ysmVersion": "2.6.5",
-      "loader": "neoforge"
+      "loader": "forge"
     }
   ],
   "expectations": {
@@ -71,7 +71,7 @@
       "EQUIPMENT_RELATED": 23
     },
     "equipmentDirectRequiredLoaders": [
-      "neoforge"
+      "forge"
     ],
     "equipmentFullRequiredYsmVersions": [
       "2.6.5"

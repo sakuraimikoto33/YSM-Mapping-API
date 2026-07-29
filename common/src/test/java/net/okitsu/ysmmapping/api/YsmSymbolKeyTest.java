@@ -21,7 +21,7 @@ class YsmSymbolKeyTest {
                 && key.id().endsWith("." + key.kind().name().toLowerCase())));
         assertTrue(symbols.stream().allMatch(key -> key.origin() == SymbolOrigin.CURATED));
         assertTrue(symbols.stream().noneMatch(key -> key.id().contains("fabric")
-                || key.id().contains("neoforge") || key.id().matches(".*\\d{6}.*")
+                || key.id().contains("forge") || key.id().matches(".*\\d{6}.*")
                 || key.id().contains("com.elfmcys")));
     }
 

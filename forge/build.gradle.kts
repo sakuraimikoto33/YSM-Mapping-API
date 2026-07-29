@@ -1,34 +1,27 @@
 plugins {
     `java-library`
-    id("net.neoforged.moddev") version "2.0.141"
+    id("net.minecraftforge.gradle") version "6.0.54"
 }
 
 val minecraftVersion = providers.gradleProperty("minecraftVersion").get()
+val forgeVersion = providers.gradleProperty("forgeVersion").get()
 val resourceVersion = rootProject.version.toString()
 
 base {
-    archivesName.set("ysm-mapping-api-neoforge-$minecraftVersion")
+    archivesName.set("ysm-mapping-api-forge-$minecraftVersion")
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
     withSourcesJar()
 }
 
-neoForge {
-    version = providers.gradleProperty("neoForgeVersion").get()
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(17)
+}
 
-    runs {
-        create("client") {
-            client()
-        }
-    }
-
-    mods {
-        create("ysm_mapping_api") {
-            sourceSet(sourceSets.main.get())
-        }
-    }
+minecraft {
+    mappings("official", minecraftVersion)
 }
 
 val embeddedCommon by configurations.creating {
@@ -36,6 +29,7 @@ val embeddedCommon by configurations.creating {
 }
 
 dependencies {
+    minecraft("net.minecraftforge:forge:$minecraftVersion-$forgeVersion")
     implementation(project(":api"))
     implementation(project(":common"))
 
@@ -48,18 +42,22 @@ tasks.jar {
     inputs.files(embeddedCommon)
     from(embeddedCommon.map { if (it.isDirectory) it else zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes["MixinConfigs"] = "ysm_mapping_api.mixins.json"
+    }
+    finalizedBy("reobfJar")
 }
 
 tasks.processResources {
     inputs.property("version", resourceVersion)
     inputs.property("minecraftVersion", minecraftVersion)
-    inputs.property("neoForgeVersion", providers.gradleProperty("neoForgeVersion").get())
+    inputs.property("forgeVersion", forgeVersion)
 
-    filesMatching("META-INF/neoforge.mods.toml") {
+    filesMatching("META-INF/mods.toml") {
         expand(
             "version" to resourceVersion,
             "minecraftVersion" to minecraftVersion,
-            "neoForgeVersion" to providers.gradleProperty("neoForgeVersion").get()
+            "forgeVersion" to forgeVersion
         )
     }
 }

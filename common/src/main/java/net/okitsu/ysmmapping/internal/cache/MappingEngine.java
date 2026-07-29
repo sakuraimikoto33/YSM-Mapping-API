@@ -192,7 +192,7 @@ public final class MappingEngine implements YsmMappingProvider {
                 if (candidates.size() == 1) {
                     entries.put(request.cacheId, MappingsDocument.EntryJson.resolved(key,
                             request.definitionSha256, ResolutionStatus.STRUCTURAL,
-                            candidates.getFirst().symbol()));
+                            candidates.get(0).symbol()));
                 } else {
                     entries.put(request.cacheId, MappingsDocument.EntryJson.candidates(key,
                             request.definitionSha256, candidates, policy,

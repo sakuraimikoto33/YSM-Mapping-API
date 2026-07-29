@@ -160,12 +160,12 @@ final class MappingsDocument {
             json.origin = key.origin().name();
             json.definitionSha256 = definitionSha256;
             json.kind = key.kind().name();
-            json.confidence = ordered.getFirst().confidence();
+            json.confidence = ordered.get(0).confidence();
             json.candidates = ordered.stream().map(CandidateJson::from).toList();
             json.diagnostic = diagnostic;
             if (policy == ResolutionPolicy.BEST_EFFORT) {
                 json.status = ResolutionStatus.BEST_EFFORT.name();
-                json.resolved = ResolvedJson.from(ordered.getFirst().symbol());
+                json.resolved = ResolvedJson.from(ordered.get(0).symbol());
             } else {
                 json.status = ResolutionStatus.AMBIGUOUS.name();
             }

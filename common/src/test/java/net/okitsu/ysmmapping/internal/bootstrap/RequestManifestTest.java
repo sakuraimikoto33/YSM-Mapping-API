@@ -77,24 +77,24 @@ class RequestManifestTest {
                         "name":"send",
                         "descriptor":"(Ljava/nio/ByteBuffer;)V"
                       },
-                      "neoforge": {"name":"sendNeoForge"}
+                      "forge": {"name":"sendForge"}
                     },
                     "definition": {
                       "common": {"descriptorShapes":["(Ljava/nio/ByteBuffer;)V"]},
                       "fabric": {},
-                      "neoforge": {}
+                      "forge": {}
                     }
                   }],
                   "mixinRequirements": {"example.Mixin":["client_frame_sender"]}
                 }
                 """);
         RequestManifest manifest = RequestManifest.read(
-                new RequestManifestSource("owner_mod", path), "neoforge");
+                new RequestManifestSource("owner_mod", path), "forge");
         var key = manifest.symbols().keySet().iterator().next();
         assertEquals("@consumer/owner_mod/client_frame_sender",
                 key.scopedId("owner_mod"));
         assertTrue(key.definitionSha256().matches("[0-9a-f]{64}"));
-        assertEquals("sendNeoForge", manifest.sourceAliases().get("client_frame_sender").name());
+        assertEquals("sendForge", manifest.sourceAliases().get("client_frame_sender").name());
     }
 
     @Test

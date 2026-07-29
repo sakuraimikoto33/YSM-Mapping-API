@@ -1,8 +1,8 @@
-package net.okitsu.ysmmapping.neoforge;
+package net.okitsu.ysmmapping.forge;
 
-import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.fml.loading.LoadingModList;
+import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.fml.loading.LoadingModList;
 import net.okitsu.ysmmapping.internal.bootstrap.PlatformAdapter;
 import net.okitsu.ysmmapping.internal.bootstrap.RequestManifestSource;
 import net.okitsu.ysmmapping.internal.bootstrap.YsmInstallation;
@@ -15,13 +15,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public final class NeoForgePlatformAdapter implements PlatformAdapter {
+public final class ForgePlatformAdapter implements PlatformAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger("ysm_mapping_api");
     private static final String[] REQUEST = {"META-INF", "ysm-mapping-api", "requests-v1.json"};
 
     @Override
     public String loader() {
-        return "neoforge";
+        return "forge";
     }
 
     @Override
@@ -67,7 +67,7 @@ public final class NeoForgePlatformAdapter implements PlatformAdapter {
     private static LoadingModList loadingMods() {
         LoadingModList mods = FMLLoader.getLoadingModList();
         if (mods == null) {
-            throw new IllegalStateException("NeoForge mod discovery has not completed");
+            throw new IllegalStateException("Forge mod discovery has not completed");
         }
         return mods;
     }
