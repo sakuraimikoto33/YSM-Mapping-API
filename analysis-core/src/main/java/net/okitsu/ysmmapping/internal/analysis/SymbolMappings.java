@@ -36,6 +36,7 @@ public final class SymbolMappings {
         method(values, YsmSymbols.CLIENT_MODEL_CONNECTED, build.clientModelConnected());
         method(values, YsmSymbols.CLIENT_MODEL_RESET, build.clientModelReset());
         method(values, YsmSymbols.CLIENT_MODEL_MAP_GETTER, build.clientModelMapGetter());
+        method(values, YsmSymbols.CLIENT_MODEL_LOOKUP, build.clientModelLookup());
         method(values, YsmSymbols.CLIENT_MODEL_CATALOG_DELTA_CALLBACK,
                 build.clientModelCatalogDeltaCallback());
         method(values, YsmSymbols.CLIENT_PACK_MAP_GETTER, build.clientPackMapGetter());
@@ -99,8 +100,8 @@ public final class SymbolMappings {
         method(values, YsmSymbols.PLAYER_STATE_FULL_ROAMING_INITIALIZER,
                 build.playerStateFullRoamingInitializer());
 
-        if (values.size() != 62) {
-            throw new IOException("YSM mapping does not cover the 62-symbol legacy surface");
+        if (values.size() != 63) {
+            throw new IOException("YSM mapping does not cover the 63-symbol legacy surface");
         }
         return Map.copyOf(values);
     }
