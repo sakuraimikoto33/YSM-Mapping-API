@@ -44,13 +44,15 @@ function Mutate-And-Restore {
 try {
     $actual = Invoke-Parity $serverlessSource $mappingSource
     Assert-True ($actual.Json.success) "Actual repository parity failed."
-    Assert-True (@($actual.Json.excluded).Count -eq 2) "Excluded repository inputs were not reported."
+    Assert-True (@($actual.Json.excluded).Count -eq 3) "Excluded repository inputs were not reported."
 
     $serverless = Join-Path $testRoot "Serverless-YSM"
     $mapping = Join-Path $testRoot "YSM-Mapping-API"
     [void](New-Item -ItemType Directory -Force -Path $serverless, $mapping)
     Copy-Item -LiteralPath (Join-Path $serverlessSource ".agents") -Destination $serverless -Recurse
     Copy-Item -LiteralPath (Join-Path $mappingSource ".agents") -Destination $mapping -Recurse
+    Copy-Item -LiteralPath (Join-Path $serverlessSource "AGENTS.md") -Destination $serverless
+    Copy-Item -LiteralPath (Join-Path $mappingSource "AGENTS.md") -Destination $mapping
     Assert-True ((Invoke-Parity $serverless $mapping).Json.success) "Copied fixture parity failed."
 
     $taskReference = Join-Path $mapping ".agents/skills/manage-ysm-mapping-api-git/references/task-boundaries.md"
@@ -67,6 +69,10 @@ try {
     $workflow = Join-Path $mapping ".agents/skills/manage-ysm-mapping-api-git/scripts/repository-workflow.ps1"
     Mutate-And-Restore $workflow { param($path) [IO.File]::AppendAllText($path, "`n# script drift`n") } {
         Assert-DetectedFailure $serverless $mapping "Content parity mismatch"
+    }
+    $agents = Join-Path $mapping "AGENTS.md"
+    Mutate-And-Restore $agents { param($path) [IO.File]::AppendAllText($path, "`n- Common workflow drift.`n") } {
+        Assert-DetectedFailure $serverless $mapping "Normalized instruction mismatch"
     }
     $historyPolicy = Join-Path $mapping ".agents/skills/rewrite-ysm-mapping-api-history/references/rewrite-policy.md"
     Mutate-And-Restore $historyPolicy { param($path) Remove-Item -LiteralPath $path -Force } {

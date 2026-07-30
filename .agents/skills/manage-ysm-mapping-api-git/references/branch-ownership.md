@@ -4,7 +4,7 @@ Read this reference only for ownership questions, mixed root files, or work span
 
 ## Main
 
-Commit repository instructions, `.agents/`, `.gitignore`, Gradle wrapper files, shared Gradle foundations, `api-core/`, `analysis-core/`, shared mapping tools, and shared API/analysis/tooling documentation on `main`.
+Commit repository instructions, `.agents/`, `.gitignore`, Gradle wrapper files, shared Gradle foundations, `api-core/`, `analysis-core/`, shared mapping tools, and shared API/analysis/tooling documentation on `main`. In particular, edit and commit `.agents/active-minecraft-branches.txt` only on `main`; version branches receive it only through a main merge.
 
 ## Minecraft branches
 

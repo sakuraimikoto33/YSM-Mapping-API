@@ -35,5 +35,6 @@
         "^(?!gradle/wrapper/gradle-wrapper\.jar$).+\.jar$"
         "\.(?:dll|so|dylib)$"
     )
+    PropagationSiblingRepositories = @()
     RepositoryVerifier = ".agents/skills/maintain-ysm-mapping-contract/scripts/verify-mapping-contract.ps1"
 }

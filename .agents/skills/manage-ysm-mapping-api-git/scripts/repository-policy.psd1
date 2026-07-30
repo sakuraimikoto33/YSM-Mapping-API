@@ -1,6 +1,7 @@
 @{
     MainBranch = "main"
     MinecraftBranchPattern = "^mc/[0-9A-Za-z][0-9A-Za-z._+-]*$"
+    ActiveMinecraftBranchesFile = ".agents/active-minecraft-branches.txt"
     ContractVersionPatterns = @(
         "^\+.*\bmodVersion\s*="
     )
