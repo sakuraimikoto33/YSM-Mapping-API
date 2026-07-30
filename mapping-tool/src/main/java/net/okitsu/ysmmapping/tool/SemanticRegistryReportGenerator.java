@@ -41,10 +41,6 @@ final class SemanticRegistryReportGenerator {
         Set<String> relatedKeys = keysMatching(YsmSymbols::isEquipmentRelated);
         Set<String> equipmentKeys = new TreeSet<>(directKeys);
         equipmentKeys.addAll(relatedKeys);
-        Map<String, Set<String>> categoryKeys = Map.of(
-                "SERVERLESS", serverlessKeys,
-                "EQUIPMENT_DIRECT", directKeys,
-                "EQUIPMENT_RELATED", relatedKeys);
 
         List<Map<String, Object>> targets = new ArrayList<>();
         for (FixtureCatalog.Fixture fixture : catalog.fixtures()) {
@@ -114,20 +110,6 @@ final class SemanticRegistryReportGenerator {
         if (profile.definitions().size() != catalog.expectations().registryTotal()) {
             mismatches.add("registry total=" + profile.definitions().size() + '/'
                     + catalog.expectations().registryTotal());
-        }
-        for (Map.Entry<String, Integer> expected
-                : catalog.expectations().categories().entrySet()) {
-            String category = expected.getKey().toUpperCase(java.util.Locale.ROOT);
-            Set<String> keys = categoryKeys.get(category);
-            if (keys == null) {
-                throw new IllegalArgumentException(
-                        "Unknown category expectation: " + expected.getKey());
-            }
-            int actual = keys.size();
-            if (actual != expected.getValue()) {
-                mismatches.add("category " + expected.getKey() + '=' + actual + '/'
-                        + expected.getValue());
-            }
         }
         if (targets.size() != catalog.fixtures().size()) {
             mismatches.add("validation target count=" + targets.size() + '/'

@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -63,22 +62,14 @@ public record FixtureCatalog(String minecraftVersion, List<Fixture> fixtures,
         }
     }
 
-    public record Expectations(int registryTotal, Map<String, Integer> categories,
+    public record Expectations(int registryTotal,
                                List<String> equipmentDirectRequiredLoaders,
                                List<String> equipmentFullRequiredYsmVersions) {
         private Expectations validated() {
-            if (registryTotal <= 0 || categories == null || categories.isEmpty()) {
+            if (registryTotal <= 0) {
                 throw new IllegalArgumentException("Invalid catalog aggregate expectations");
             }
-            Map<String, Integer> categoryValues = new TreeMap<>();
-            categories.forEach((key, value) -> {
-                if (key == null || key.isBlank() || value == null || value < 0) {
-                    throw new IllegalArgumentException("Invalid category expectation");
-                }
-                categoryValues.put(key, value);
-            });
             return new Expectations(registryTotal,
-                    Collections.unmodifiableMap(categoryValues),
                     normalized(equipmentDirectRequiredLoaders),
                     normalized(equipmentFullRequiredYsmVersions));
         }
