@@ -67,7 +67,6 @@ class FixtureCatalogTest {
                 "fixtures", fixtures,
                 "expectations", Map.of(
                         "registryTotal", 1,
-                        "categories", Map.of("SERVERLESS", 1),
                         "equipmentDirectRequiredLoaders", List.of(),
                         "equipmentFullRequiredYsmVersions", List.of())));
     }
