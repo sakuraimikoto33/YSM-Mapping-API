@@ -74,8 +74,12 @@ try {
     $shared = [string]$policy.SharedPaths[0]
     $versionScope = [string]$policy.VersionPaths[0]
     $mixed = [string]$policy.MixedPaths[0]
+    $activeFile = [string]$policy.ActiveMinecraftBranchesFile
     Set-File $repo $shared "shared`n"
     Set-File $repo $mixed "mixed`n"
+    Set-File $repo $activeFile "mc/1.21.1`n"
+    Set-File $repo ".agents/overlay-shared.txt" "shared base`n"
+    Set-File $repo ".agents/delete-overlay.txt" "delete me`n"
     Set-File $repo "gradle.properties" "modVersion=1`nloaderVersion=1`nminecraftVersion=1.21.1`n"
     Set-File $repo "gradlew.bat" "@echo off`r`nexit /b 0`r`n"
     [void](Git $repo @("add", ".")); [void](Git $repo @("commit", "-q", "-m", "base"))
@@ -91,6 +95,9 @@ try {
     Assert-True (-not $inspect.Json.dirty) "Fixture should start clean."
     Assert-True ($inspect.Json.mainExists) "main should exist."
     Assert-True (@($inspect.Json.minecraftBranches) -contains "mc/1.21.1") "Minecraft branch missing."
+    Assert-True ($inspect.Json.activeMinecraftBranchFile.valid) "Active branch file should be valid."
+    Assert-True (@($inspect.Json.activeMinecraftBranches).Count -eq 1) "Active branch count mismatch."
+    Assert-True (@($inspect.Json.activeMinecraftBranches) -contains "mc/1.21.1") "Active branch missing."
     Assert-True (@($inspect.Json.inProgress).Count -eq 0) "Unexpected in-progress state."
 
     $categories = @{}
@@ -224,6 +231,11 @@ try {
         "-Message", "Change unknown", "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild") -ExpectFailure
     Assert-True ($unknownCommit.Json.error -match "unknown ownership") "Unknown ownership was not rejected."
     Remove-Item -LiteralPath (Join-Path $repo "unknown.txt") -Force
+    Set-File $repo $activeFile "mc/1.21.1`n# illegal branch edit`n"
+    $activeCommit = Invoke-Workflow $repo @("-Operation", "Commit", "-Path", $activeFile, "-ExpectedBranch", "mc/1.22.0",
+        "-Message", "Change active branches", "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild") -ExpectFailure
+    Assert-True ($activeCommit.Json.error -match "only on main") "Active branch file commit outside main was accepted."
+    [void](Git $repo @("restore", $activeFile))
 
     $bare = Join-Path $testRoot "remote.git"; & $git init -q --bare $bare
     [void](Git $repo @("remote", "add", "fixture", $bare))
@@ -245,37 +257,189 @@ try {
     Assert-True ($forceAllowed.Json.forceMode -eq "ForceWithLease") "Separately authorized force-with-lease was not accepted."
 
     [void](Git $repo @("switch", "-q", "main"))
-    [void](Git $repo @("switch", "-q", "-c", "mc/conflict"))
-    Set-File $repo ".agents/merge-fixture.txt" "conflicting Minecraft content`n"
-    [void](Git $repo @("add", ".agents/merge-fixture.txt")); [void](Git $repo @("commit", "-q", "-m", "conflicting Minecraft merge fixture"))
-    [void](Git $repo @("switch", "-q", "main"))
-    Set-File $repo ".agents/merge-fixture.txt" "merge from main`n"
-    [void](Git $repo @("add", ".agents/merge-fixture.txt")); [void](Git $repo @("commit", "-q", "-m", "shared merge fixture"))
-    $tipsBeforeMergeConflict = @{}
-    foreach ($ref in @("main", "mc/1.21.1", "mc/1.22.0", "mc/conflict")) {
-        $tipsBeforeMergeConflict[$ref] = (Git $repo @("rev-parse", $ref)).Text.Trim()
+    Set-File $repo $activeFile "mc/1.21.1`nmc/1.22.0`n"
+    [void](Git $repo @("add", $activeFile)); [void](Git $repo @("commit", "-q", "-m", "activate fixture branches"))
+    [void](Git $repo @("branch", "mc/inactive"))
+    $inactiveTip = (Git $repo @("rev-parse", "mc/inactive")).Text.Trim()
+    Set-File $repo ".agents/propagate-main-only.txt" "main only`n"
+    [void](Git $repo @("add", ".agents/propagate-main-only.txt"))
+    [void](Git $repo @("commit", "-q", "-m", "Add main-only fixture"))
+    $propagatedMain = (Git $repo @("rev-parse", "main")).Text.Trim()
+    $worktreeCountBefore = @((Git $repo @("worktree", "list", "--porcelain")).Lines |
+        Where-Object { $_.StartsWith("worktree ") }).Count
+    $propagated = Invoke-Workflow $repo @("-Operation", "PropagateMain", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild")
+    Assert-True (@($propagated.Json.merged).Count -eq 2) "Main-only propagation did not merge every active branch."
+    Assert-True ($propagated.Json.finalBranch -eq "main") "Main-only propagation did not return to main."
+    Assert-True ([int]$propagated.Json.worktreeCount -eq $worktreeCountBefore) "Main-only propagation changed worktree count."
+    foreach ($branch in @("mc/1.21.1", "mc/1.22.0")) {
+        Assert-True ((Git $repo @("rev-parse", "$branch^2")).Text.Trim() -eq $propagatedMain) "Propagation was not a no-ff main merge."
     }
-    $mergeConflict = Invoke-Workflow $repo @("-Operation", "MergeMain", "-Authorization", "ExplicitUser", "-ConfirmExecution",
-        "-FinalBranch", "main", "-SkipBuild") -ExpectFailure
-    Assert-True ($mergeConflict.Json.error -match "preflight failed") "MergeMain conflict was not caught in preflight."
-    foreach ($ref in $tipsBeforeMergeConflict.Keys) {
-        Assert-True ((Git $repo @("rev-parse", $ref)).Text.Trim() -eq $tipsBeforeMergeConflict[$ref]) "MergeMain conflict moved $ref."
+    Assert-True ((Git $repo @("rev-parse", "mc/inactive")).Text.Trim() -eq $inactiveTip) "Propagation moved an inactive branch."
+    $tipsBeforeOverlay = @{}
+    foreach ($ref in @("main", "mc/1.21.1", "mc/1.22.0", "mc/inactive")) {
+        $tipsBeforeOverlay[$ref] = (Git $repo @("rev-parse", $ref)).Text.Trim()
     }
-    Assert-True ((Git $repo @("branch", "--show-current")).Text.Trim() -eq "main") "MergeMain conflict changed the current branch."
-    [void](Git $repo @("branch", "-D", "mc/conflict"))
-    $merge = Invoke-Workflow $repo @("-Operation", "MergeMain", "-Authorization", "ExplicitUser", "-ConfirmExecution",
-        "-FinalBranch", "mc/1.22.0", "-SkipBuild")
-    Assert-True (@($merge.Json.merged).Count -eq 2) "MergeMain did not update every local Minecraft branch."
-    Assert-True ($merge.Json.finalBranch -eq "mc/1.22.0") "MergeMain final branch mismatch."
-    foreach ($target in @("mc/1.21.1", "mc/1.22.0")) {
-        Assert-True ((Git $repo @("merge-base", "--is-ancestor", "main", $target) -AllowFailure).ExitCode -eq 0) "main was not merged into $target."
+
+    Set-File $repo ".agents/overlay-shared.txt" "shared overlay`n"
+    Set-File $repo ".agents/new-overlay.txt" "new overlay`n"
+    Remove-Item -LiteralPath (Join-Path $repo ".agents/delete-overlay.txt") -Force
+    $overlayPaths = @(".agents")
+    $propagateDirty = Invoke-Workflow $repo @("-Operation", "PropagateMain", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild") -ExpectFailure
+    Assert-True ($propagateDirty.Json.error -match "clean primary worktree") "Dirty main propagation was accepted."
+    $noTargets = Invoke-Workflow $repo @("-Operation", "PrepareActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild", "-Path", ".agents") -ExpectFailure
+    Assert-True ($noTargets.Json.error -match "at least two") "Zero direct-edit branches were accepted."
+    $oneTarget = Invoke-Workflow $repo @("-Operation", "PrepareActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild", "-Path", ".agents", "-MinecraftBranch", "mc/1.21.1") -ExpectFailure
+    Assert-True ($oneTarget.Json.error -match "at least two") "One direct-edit branch was accepted."
+    $duplicateTarget = Invoke-Workflow $repo @("-Operation", "PrepareActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild", "-Path", ".agents", "-MinecraftBranch", "mc/1.21.1,mc/1.21.1") -ExpectFailure
+    Assert-True ($duplicateTarget.Json.error -match "duplicate") "Duplicate direct-edit branches were accepted."
+    $inactiveTarget = Invoke-Workflow $repo @("-Operation", "PrepareActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild", "-Path", ".agents", "-MinecraftBranch", "mc/1.21.1,mc/inactive") -ExpectFailure
+    Assert-True ($inactiveTarget.Json.error -match "must be active") "Inactive direct-edit branch was accepted."
+    $invalidTarget = Invoke-Workflow $repo @("-Operation", "PrepareActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild", "-Path", ".agents", "-MinecraftBranch", "mc/1.21.1,invalid") -ExpectFailure
+    Assert-True ($invalidTarget.Json.error -match "complete mc/<version>") "Invalid direct-edit branch was accepted."
+    $prepared = Invoke-Workflow $repo (@("-Operation", "PrepareActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild", "-Path") + $overlayPaths +
+        @("-MinecraftBranch", "mc/1.21.1,mc/1.22.0"))
+    Assert-True (@($prepared.Json.worktrees).Count -eq 2) "Active worktree preparation count mismatch."
+    Assert-True ((Git $repo @("branch", "--show-current")).Text.Trim() -eq "main") "Preparation changed the primary branch."
+    foreach ($ref in $tipsBeforeOverlay.Keys) {
+        Assert-True ((Git $repo @("rev-parse", $ref)).Text.Trim() -eq $tipsBeforeOverlay[$ref]) "Overlay preparation moved $ref."
     }
+    foreach ($item in @($prepared.Json.worktrees)) {
+        $worktree = [string]$item.path
+        Assert-True ([IO.File]::ReadAllText((Join-Path $worktree ".agents/overlay-shared.txt")) -eq "shared overlay`n") "Shared overlay missing."
+        Assert-True ([IO.File]::ReadAllText((Join-Path $worktree ".agents/new-overlay.txt")) -eq "new overlay`n") "New overlay file missing."
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $worktree ".agents/delete-overlay.txt"))) "Overlay deletion missing."
+    }
+    $mergeOnlyCapture = Invoke-Workflow $repo @("-Operation", "CaptureActiveWorktreeChanges",
+        "-SnapshotPath", [string]$prepared.Json.snapshot) -ExpectFailure
+    Assert-True ($mergeOnlyCapture.Json.error -match "no direct Minecraft edit") "Main overlay counted as a direct Minecraft edit."
+    foreach ($item in @($prepared.Json.worktrees)) {
+        $worktree = [string]$item.path
+        Set-File $worktree (Join-Path $versionScope "active.txt") "version change for $($item.branch)`n"
+    }
+
+    $firstWorktree = [string]$prepared.Json.worktrees[0].path
+    Set-File $firstWorktree ".agents/overlay-shared.txt" "illegal shared version change`n"
+    $sharedRejected = Invoke-Workflow $repo @("-Operation", "CaptureActiveWorktreeChanges",
+        "-SnapshotPath", [string]$prepared.Json.snapshot) -ExpectFailure
+    Assert-True ($sharedRejected.Json.error -match "non-version path") "Shared overlay modification was not rejected."
+    Set-File $firstWorktree ".agents/overlay-shared.txt" "shared overlay`n"
+
+    $capture = Invoke-Workflow $repo @("-Operation", "CaptureActiveWorktreeChanges",
+        "-SnapshotPath", [string]$prepared.Json.snapshot)
+    Assert-True (@($capture.Json.worktrees).Count -eq 2) "Active worktree capture count mismatch."
+    $mainCommit = Invoke-Workflow $repo (@("-Operation", "Commit", "-ExpectedBranch", "main",
+        "-Message", "Apply shared overlay fixture", "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild",
+        "-Path") + $overlayPaths)
+    Assert-True ($mainCommit.Json.parent -eq $tipsBeforeOverlay["main"]) "Main overlay commit parent mismatch."
+
+    $merge = Invoke-Workflow $repo @("-Operation", "MergeMain", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SnapshotPath", [string]$capture.Json.snapshot, "-SkipBuild")
+    Assert-True (@($merge.Json.merged).Count -eq 2) "MergeMain did not update every active Minecraft branch."
+    Assert-True ($merge.Json.finalBranch -eq "main") "MergeMain changed the primary branch."
+    foreach ($item in @($merge.Json.merged)) {
+        $branch = [string]$item.branch; $worktree = [string]$item.path
+        Assert-True ((Git $repo @("merge-base", "--is-ancestor", "main", $branch) -AllowFailure).ExitCode -eq 0) "main was not merged into $branch."
+        Assert-True ([IO.File]::ReadAllText((Join-Path $worktree (Join-Path $versionScope "active.txt"))) -eq
+            "version change for $branch`n") "Version change was not restored for $branch."
+        $versionCommit = Invoke-Workflow $worktree @("-Operation", "Commit", "-Path", $versionScope,
+            "-ExpectedBranch", $branch, "-Message", "Apply active version fixture", "-Authorization", "ExplicitUser",
+            "-ConfirmExecution", "-SkipBuild")
+        Assert-True ($versionCommit.Json.branch -eq $branch) "Version commit branch mismatch."
+    }
+    Assert-True ((Git $repo @("rev-parse", "mc/inactive")).Text.Trim() -eq $inactiveTip) "Inactive branch moved."
+
+    $dirtyWorktree = [string]$merge.Json.merged[0].path
+    Set-File $dirtyWorktree (Join-Path $versionScope "dirty.txt") "retain me`n"
+    $cleanup = Invoke-Workflow $repo @("-Operation", "CleanupActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution")
+    Assert-True (@($cleanup.Json.removed).Count -eq 1) "Cleanup should remove one clean worktree."
+    Assert-True (@($cleanup.Json.retained).Count -eq 1) "Cleanup should retain one dirty worktree."
+    Remove-Item -LiteralPath (Join-Path $dirtyWorktree (Join-Path $versionScope "dirty.txt")) -Force
+    $cleanupFinal = Invoke-Workflow $repo @("-Operation", "CleanupActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution")
+    Assert-True (@($cleanupFinal.Json.removed).Count -eq 1) "Final cleanup did not remove the cleaned worktree."
+
+    $mixedBase = [IO.File]::ReadAllText((Join-Path $repo $mixed))
+    Set-File $repo $mixed ($mixedBase + "main mixed overlay`n")
+    $mixedPrepared = Invoke-Workflow $repo @("-Operation", "PrepareActiveWorktrees", "-Path", $mixed,
+        "-MinecraftBranch", "mc/1.21.1,mc/1.22.0",
+        "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild")
+    foreach ($item in @($mixedPrepared.Json.worktrees)) {
+        $worktree = [string]$item.path
+        Assert-True ([IO.File]::ReadAllText((Join-Path $worktree $mixed)) -eq
+            ($mixedBase + "main mixed overlay`n")) "Mixed main overlay missing."
+        Set-File $worktree $mixed ($mixedBase + "main mixed overlay`nversion mixed $($item.branch)`n")
+    }
+    $mixedCapture = Invoke-Workflow $repo @("-Operation", "CaptureActiveWorktreeChanges",
+        "-SnapshotPath", [string]$mixedPrepared.Json.snapshot)
+    [void](Invoke-Workflow $repo @("-Operation", "Commit", "-Path", $mixed, "-ExpectedBranch", "main",
+        "-Message", "Apply mixed overlay fixture", "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild"))
+    $mixedMerge = Invoke-Workflow $repo @("-Operation", "MergeMain", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SnapshotPath", [string]$mixedCapture.Json.snapshot, "-SkipBuild")
+    foreach ($item in @($mixedMerge.Json.merged)) {
+        $branch = [string]$item.branch; $worktree = [string]$item.path
+        Assert-True ([IO.File]::ReadAllText((Join-Path $worktree $mixed)) -eq
+            ($mixedBase + "main mixed overlay`nversion mixed $branch`n")) "Mixed version hunk was not restored."
+        [void](Invoke-Workflow $worktree @("-Operation", "Commit", "-Path", $mixed, "-ExpectedBranch", $branch,
+            "-Message", "Apply mixed version fixture", "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild"))
+    }
+    $mixedCleanup = Invoke-Workflow $repo @("-Operation", "CleanupActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution")
+    Assert-True (@($mixedCleanup.Json.removed).Count -eq 2) "Mixed worktree cleanup count mismatch."
+
+    $cleanPrepared = Invoke-Workflow $repo @("-Operation", "PrepareActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild", "-MinecraftBranch", "mc/1.21.1,mc/1.22.0")
+    Assert-True (@($cleanPrepared.Json.worktrees).Count -eq 2) "Clean active worktree preparation count mismatch."
+    $propagateWithWorktrees = Invoke-Workflow $repo @("-Operation", "PropagateMain", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SkipBuild") -ExpectFailure
+    Assert-True ($propagateWithWorktrees.Json.error -match "additional or unexpected") "Propagation accepted extra worktrees."
+    foreach ($item in @($cleanPrepared.Json.worktrees)) {
+        Assert-True (-not (Git ([string]$item.path) @("status", "--porcelain=v1")).Lines.Count) "Clean preparation created pending changes."
+        Set-File ([string]$item.path) (Join-Path $versionScope "no-main.txt") "no main $($item.branch)`n"
+    }
+    $noMainCapture = Invoke-Workflow $repo @("-Operation", "CaptureActiveWorktreeChanges",
+        "-SnapshotPath", [string]$cleanPrepared.Json.snapshot)
+    $noMainMerge = Invoke-Workflow $repo @("-Operation", "MergeMain", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution", "-SnapshotPath", [string]$noMainCapture.Json.snapshot, "-SkipBuild")
+    foreach ($item in @($noMainMerge.Json.merged)) {
+        [void](Invoke-Workflow ([string]$item.path) @("-Operation", "Commit", "-Path", $versionScope,
+            "-ExpectedBranch", [string]$item.branch, "-Message", "Apply no-main version fixture",
+            "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild"))
+    }
+    $noMainCleanup = Invoke-Workflow $repo @("-Operation", "CleanupActiveWorktrees", "-Authorization", "ExplicitUser",
+        "-ConfirmExecution")
+    Assert-True (@($noMainCleanup.Json.removed).Count -eq 2) "No-main worktree cleanup count mismatch."
 
     $audit = Invoke-Workflow $repo @("-Operation", "Audit")
     Assert-True ($audit.Json.success) "Final fixture audit failed."
     Assert-True ($audit.Json.policy.mainExists) "Audit did not enforce the required main branch."
-    Assert-True (@($audit.Json.policy.minecraftBranches).Count -eq 2) "Audit Minecraft branch count mismatch."
+    Assert-True (@($audit.Json.policy.activeMinecraftBranches).Count -eq 2) "Audit active branch count mismatch."
+    Assert-True (@($audit.Json.policy.inactiveMinecraftBranches) -contains "mc/inactive") "Audit inactive branch missing."
     Assert-True (@($audit.Json.policy.contractVersionLines).Count -eq 0) "Unexpected guarded version lines."
+
+    $activePath = Join-Path $repo $activeFile
+    $activeBytes = [IO.File]::ReadAllBytes($activePath)
+    try {
+        Set-File $repo $activeFile "mc/1.21.1`nmc/1.21.1`n"
+        $duplicateActive = Invoke-Workflow $repo @("-Operation", "Audit", "-AllowDirty") -ExpectFailure
+        Assert-True ($duplicateActive.Json.error -match "Duplicate active Minecraft branch") "Duplicate active branch was accepted."
+        Set-File $repo $activeFile "mc/missing`n"
+        $missingActive = Invoke-Workflow $repo @("-Operation", "Audit", "-AllowDirty") -ExpectFailure
+        Assert-True ($missingActive.Json.error -match "does not exist") "Missing active branch was accepted."
+        Set-File $repo $activeFile "not-a-minecraft-branch`n"
+        $invalidActive = Invoke-Workflow $repo @("-Operation", "Audit", "-AllowDirty") -ExpectFailure
+        Assert-True ($invalidActive.Json.error -match "Invalid active Minecraft branch") "Invalid active branch was accepted."
+    } finally {
+        [IO.File]::WriteAllBytes($activePath, $activeBytes)
+    }
 
     $profilePath = Join-Path $repo ".agents/repository-profile.psd1"
     $profileText = [IO.File]::ReadAllText($profilePath)
@@ -290,6 +454,37 @@ try {
         "        `"$shared`"", "        `"C:/absolute`"")) "unsafe repository-relative path"
     Assert-ProfileRejected $repo ($profileText.Replace(
         "        `"$mixed`"", "        `"$shared`"")) "appears in both"
+
+    $propagateConflict = Join-Path $testRoot "propagate-conflict"
+    & $git init -q -b main $propagateConflict
+    [void](Git $propagateConflict @("config", "user.name", "Workflow Fixture"))
+    [void](Git $propagateConflict @("config", "user.email", "fixture@example.invalid"))
+    [void](Git $propagateConflict @("config", "core.autocrlf", "false"))
+    Install-RepositoryProfile $propagateConflict
+    Set-File $propagateConflict $shared "base`n"
+    Set-File $propagateConflict $mixed "mixed`n"
+    Set-File $propagateConflict $activeFile "mc/1.21.1`nmc/1.22.0`n"
+    Set-File $propagateConflict "gradle.properties" ([IO.File]::ReadAllText((Join-Path $repo "gradle.properties")))
+    Set-File $propagateConflict "gradlew.bat" "@echo off`r`nexit /b 0`r`n"
+    [void](Git $propagateConflict @("add", "."))
+    [void](Git $propagateConflict @("commit", "-q", "-m", "propagation base"))
+    foreach ($branch in @("mc/1.21.1", "mc/1.22.0")) {
+        [void](Git $propagateConflict @("switch", "-q", "-c", $branch, "main"))
+        Set-File $propagateConflict $shared "$branch`n"
+        [void](Git $propagateConflict @("add", $shared))
+        [void](Git $propagateConflict @("commit", "-q", "-m", "conflict $branch"))
+    }
+    [void](Git $propagateConflict @("switch", "-q", "main"))
+    Set-File $propagateConflict $shared "main conflict`n"
+    [void](Git $propagateConflict @("add", $shared))
+    [void](Git $propagateConflict @("commit", "-q", "-m", "main conflict"))
+    $conflictRefsBefore = (Git $propagateConflict @("for-each-ref", "--format=%(refname)%09%(objectname)", "refs/heads")).Text
+    $propagationConflict = Invoke-Workflow $propagateConflict @("-Operation", "PropagateMain",
+        "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild") -ExpectFailure
+    Assert-True ($propagationConflict.Json.error -match "preflight merge failed") "Propagation conflict was not rejected in preflight."
+    Assert-True ((Git $propagateConflict @("for-each-ref", "--format=%(refname)%09%(objectname)", "refs/heads")).Text -eq
+        $conflictRefsBefore) "Propagation conflict moved refs."
+    Assert-True ((Git $propagateConflict @("branch", "--show-current")).Text.Trim() -eq "main") "Conflict preflight changed branch."
 
     $noMain = Join-Path $testRoot "no-main"
     & $git init -q -b mc/1.21.1 $noMain
@@ -313,6 +508,9 @@ try {
         @("-Operation", "Validate", "-AllowDirty", "-SkipBuild"),
         @("-Operation", "Audit", "-AllowDirty"),
         @("-Operation", "PrepareMinecraftBranch", "-MinecraftVersion", "1.22.0"),
+        @("-Operation", "PrepareActiveWorktrees", "-Authorization", "ExplicitUser", "-ConfirmExecution"),
+        @("-Operation", "CleanupActiveWorktrees", "-Authorization", "ExplicitUser", "-ConfirmExecution"),
+        @("-Operation", "PropagateMain", "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild"),
         @("-Operation", "Commit", "-Path", $versionScope, "-ExpectedBranch", "mc/1.21.1",
             "-Message", "Must not commit", "-Authorization", "ExplicitUser", "-ConfirmExecution", "-SkipBuild"),
         @("-Operation", "MergeMain", "-Authorization", "ExplicitUser", "-ConfirmExecution", "-FinalBranch", "mc/1.21.1", "-SkipBuild"),
