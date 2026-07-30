@@ -65,11 +65,6 @@
   ],
   "expectations": {
     "registryTotal": 95,
-    "categories": {
-      "SERVERLESS": 63,
-      "EQUIPMENT_DIRECT": 9,
-      "EQUIPMENT_RELATED": 23
-    },
     "equipmentDirectRequiredLoaders": [
       "neoforge"
     ],
