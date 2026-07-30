@@ -265,6 +265,11 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.client.model_manager.model_lookup.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.client.model_manager.pack_map_getter.method",
       "kind": "METHOD",
       "definitionRevision": 1
