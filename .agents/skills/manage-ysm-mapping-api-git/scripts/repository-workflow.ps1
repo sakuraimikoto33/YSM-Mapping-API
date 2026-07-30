@@ -1004,6 +1004,7 @@ function Propagate-Main {
             [void](Invoke-Git -Root $clone -Arguments @("config", "user.name", "Propagation Preflight"))
             [void](Invoke-Git -Root $clone -Arguments @("config", "user.email", "preflight@example.invalid"))
             [void](Invoke-Git -Root $clone -Arguments @("switch", "--quiet", "--detach", "origin/$branch"))
+            $siblingClones = [Collections.Generic.List[string]]::new()
             if (-not $SkipBuild) {
                 $workspace = Split-Path -Parent $script:RepositoryRoot
                 foreach ($sibling in @($script:Policy.PropagationSiblingRepositories)) {
@@ -1020,6 +1021,7 @@ function Propagate-Main {
                         throw "Propagation sibling lacks ${branch}: $sibling"
                     }
                     [void](Invoke-Git -Root $destination -Arguments @("switch", "--quiet", "--detach", "origin/$branch"))
+                    $siblingClones.Add($destination)
                 }
             }
             $merge = Invoke-Git -Root $clone -Arguments @("merge", "--no-ff", "--no-commit", "origin/$mainBranch") -AllowFailure
@@ -1027,9 +1029,13 @@ function Propagate-Main {
                 throw "Propagation preflight merge failed for ${branch}: $($merge.Text) $($merge.ErrorText)"
             }
             $tree = (Invoke-Git -Root $clone -Arguments @("write-tree")).Text.Trim()
+            $siblingValidations = [Collections.Generic.List[object]]::new()
+            foreach ($siblingClone in @($siblingClones)) {
+                $siblingValidations.Add((Run-Validation -Root $siblingClone -PermitDirty -SkipRepositoryPolicy -ProfileOverride "Minecraft"))
+            }
             $validation = Run-Validation -Root $clone -PermitDirty -SkipRepositoryPolicy -ProfileOverride "Minecraft"
             $preflight.Add([ordered]@{ branch = $branch; baseHead = $baseHeads[$branch];
-                tree = $tree; validation = $validation })
+                tree = $tree; siblingValidations = @($siblingValidations); validation = $validation })
         } finally {
             $resolved = [IO.Path]::GetFullPath($temp)
             $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
