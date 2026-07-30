@@ -64,9 +64,9 @@
     }
   ],
   "expectations": {
-    "registryTotal": 94,
+    "registryTotal": 95,
     "categories": {
-      "SERVERLESS": 62,
+      "SERVERLESS": 63,
       "EQUIPMENT_DIRECT": 9,
       "EQUIPMENT_RELATED": 23
     },
