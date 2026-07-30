@@ -12,6 +12,7 @@ public record YsmCompatibilityMap(String id, String minecraftVersion, String loa
                                   MethodSymbol clientModelConnected,
                                   MethodSymbol clientModelReset,
                                   MethodSymbol clientModelMapGetter,
+                                  MethodSymbol clientModelLookup,
                                   MethodSymbol clientModelCatalogDeltaCallback,
                                   MethodSymbol clientPackMapGetter,
                                   MethodSymbol clientPendingCountGetter,
