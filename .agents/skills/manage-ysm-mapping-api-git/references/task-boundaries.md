@@ -24,4 +24,8 @@ Keep A and B together for `A-derived` or `A-required`. Commit isolated A before 
 
 ## Cross-cutting boundary
 
-A task-change instruction does not authorize splitting pending main/mc work. Ask for an explicit commit instruction. Once received, it authorizes the normal snapshot, main commit, main-to-mc merges, version commits, and comparison sequence. Stop rather than improvising if any step differs from the preflight result.
+A task-change instruction does not authorize splitting pending main/mc work. Ask for an explicit commit instruction.
+
+For a new feature or fix intended for every branch listed in main's `.agents/active-minecraft-branches.txt`, finish a preceding independent main task before starting. Keep the new task's main-owned changes uncommitted, overlay only its exact paths onto managed branch worktrees, and do not commit the overlay on `mc/*`.
+
+Once an explicit cross-cutting commit instruction is received, it authorizes the normal active-worktree capture, exact main commit, verified `--no-ff` main-to-active merges, version-diff restoration and commits, comparison, and clean-worktree cleanup sequence. Stop rather than improvising if any manifest, ref, tree, worktree association, or preflight result differs.

@@ -51,13 +51,26 @@ function Normalize-InstructionText {
         @("Serverless-YSM", "<repository>"),
         @("YSM-Mapping-API", "<repository>"),
         @("Serverless YSM", "<repository>"),
-        @("YSM Mapping API", "<repository>")
+        @("YSM Mapping API", "<repository>"),
+        @("Minecraft branches", "branches")
     )) { $text = $text.Replace($pair[0], $pair[1]) }
     $text
 }
 function Normalize-ContentText {
     param([string]$Path)
     [IO.File]::ReadAllText($Path).Replace("`r`n", "`n").Replace("`r", "`n")
+}
+function Normalize-AgentsText {
+    param([string]$Path)
+    $text = Normalize-InstructionText $Path
+    $text = [regex]::Replace($text, '(?m)^- Completion alone never authorizes a commit\..*$',
+        '- Completion alone never authorizes a commit. Load `$<git-skill>` for pending work, task changes, branches, commits, merges, or pushes.')
+    $lines = @($text -split "`n" | Where-Object {
+        $_ -notmatch '\$maintain-' -and $_ -notmatch '\$analyze-' -and
+        $_ -notmatch '^- Never bump a mod/release' -and
+        $_ -notmatch '^- Never track or distribute proprietary'
+    })
+    ($lines -join "`n").TrimEnd() + "`n"
 }
 
 try {
@@ -114,6 +127,17 @@ try {
         $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
         $normalizedResults.Add([ordered]@{ serverless = $pair[0]; mapping = $pair[1]; normalizedSha256 = $hash })
     }
+    $agentsPair = @("AGENTS.md", "AGENTS.md")
+    $agentsLeft = Resolve-RequiredFile $roots.Serverless $agentsPair[0]
+    $agentsRight = Resolve-RequiredFile $roots.Mapping $agentsPair[1]
+    $agentsLeftText = Normalize-AgentsText $agentsLeft
+    $agentsRightText = Normalize-AgentsText $agentsRight
+    if ($agentsLeftText -cne $agentsRightText) { throw "Normalized instruction mismatch: AGENTS.md <> AGENTS.md." }
+    $agentsBytes = [Text.Encoding]::UTF8.GetBytes($agentsLeftText)
+    $normalizedResults.Add([ordered]@{ serverless = "AGENTS.md"; mapping = "AGENTS.md";
+        normalizedSha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($agentsBytes)) })
+    [void](Resolve-RequiredFile $roots.Serverless ".agents/active-minecraft-branches.txt")
+    [void](Resolve-RequiredFile $roots.Mapping ".agents/active-minecraft-branches.txt")
     [ordered]@{
         operation = "VerifySkillParity"
         success = $true
@@ -123,7 +147,9 @@ try {
             [ordered]@{ reason = "repository profile"; serverless = ".agents/repository-profile.psd1";
                 mapping = ".agents/repository-profile.psd1" },
             [ordered]@{ reason = "branch ownership"; serverless = ".agents/skills/manage-serverless-ysm-git/references/branch-ownership.md";
-                mapping = ".agents/skills/manage-ysm-mapping-api-git/references/branch-ownership.md" }
+                mapping = ".agents/skills/manage-ysm-mapping-api-git/references/branch-ownership.md" },
+            [ordered]@{ reason = "repository-managed active branches"; serverless = ".agents/active-minecraft-branches.txt";
+                mapping = ".agents/active-minecraft-branches.txt" }
         )
     } | ConvertTo-Json -Depth 8 -Compress
 } catch {
