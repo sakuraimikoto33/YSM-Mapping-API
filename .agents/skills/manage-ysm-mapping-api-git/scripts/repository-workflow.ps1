@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory)]
     [ValidateSet("Inspect", "Classify", "PrepareMinecraftBranch", "PrepareActiveWorktrees",
         "CaptureActiveWorktreeChanges", "CleanupActiveWorktrees", "Validate", "Snapshot",
-        "CompareSnapshot", "Commit", "MergeMain", "Push", "Audit")]
+        "CompareSnapshot", "Commit", "MergeMain", "PropagateMain", "Push", "Audit")]
     [string]$Operation,
     [string]$RepoRoot = "",
     [string[]]$Path = @(),
@@ -15,6 +15,7 @@ param(
     [switch]$ContractVersionAuthorized,
     [string]$DependencyVersionReason = "",
     [string]$MinecraftVersion = "",
+    [string[]]$MinecraftBranch = @(),
     [string]$BaseBranch = "",
     [string]$SnapshotPath = "",
     [string]$FinalBranch = "",
@@ -80,7 +81,7 @@ function Load-RepositoryPolicy {
     $coreKeys = @("MainBranch", "MinecraftBranchPattern", "ActiveMinecraftBranchesFile", "ContractVersionPatterns",
         "DependencyVersionPatterns", "MainValidation", "MinecraftValidation")
     $profileKeys = @("Name", "SharedPaths", "VersionPaths", "MixedPaths",
-        "ForbiddenTrackedPatterns", "RepositoryVerifier")
+        "ForbiddenTrackedPatterns", "PropagationSiblingRepositories", "RepositoryVerifier")
     Assert-PolicyKeys -Data $core -Required $coreKeys -Label "Core repository policy"
     Assert-PolicyKeys -Data $profile -Required $profileKeys -Label "Repository profile"
     if ([string]::IsNullOrWhiteSpace([string]$profile.Name)) { throw "Repository profile Name must not be empty." }
@@ -96,6 +97,13 @@ function Load-RepositoryPolicy {
     foreach ($pattern in @($profile.ForbiddenTrackedPatterns)) {
         try { [void][regex]::new([string]$pattern) }
         catch { throw "Invalid ForbiddenTrackedPatterns regex '$pattern': $($_.Exception.Message)" }
+    }
+    $siblings = @($profile.PropagationSiblingRepositories | ForEach-Object { ([string]$_).Trim() })
+    if (@($siblings | Where-Object { $_ -notmatch '^[0-9A-Za-z][0-9A-Za-z._-]*$' }).Count) {
+        throw "PropagationSiblingRepositories contains an unsafe repository directory name."
+    }
+    if (@($siblings | Sort-Object -Unique).Count -ne $siblings.Count) {
+        throw "PropagationSiblingRepositories contains duplicate entries."
     }
     $seen = @{}
     foreach ($category in @("SharedPaths", "VersionPaths", "MixedPaths")) {
@@ -227,6 +235,25 @@ function Active-Minecraft-Branches {
     $state = Active-Branch-State
     if (-not $state.Valid) { throw ($state.Errors -join " ") }
     @($state.Branches)
+}
+function Selected-Minecraft-Edit-Branches {
+    $selected = @($MinecraftBranch | ForEach-Object { @(([string]$_) -split ',') } |
+        ForEach-Object { ([string]$_).Trim() })
+    if ($selected.Count -lt 2) {
+        throw "PrepareActiveWorktrees requires at least two directly edited -MinecraftBranch values."
+    }
+    if (@($selected | Where-Object { $_ -notmatch [string]$script:Policy.MinecraftBranchPattern }).Count) {
+        throw "Every -MinecraftBranch must be a complete mc/<version> branch name."
+    }
+    if (@($selected | Sort-Object -Unique).Count -ne $selected.Count) {
+        throw "PrepareActiveWorktrees refuses duplicate -MinecraftBranch values."
+    }
+    $active = @(Active-Minecraft-Branches)
+    $inactive = @($selected | Where-Object { $_ -notin $active })
+    if ($inactive.Count) {
+        throw "Direct edit branches must be active: $($inactive -join ', ')."
+    }
+    @($selected)
 }
 function Managed-Worktree-Root {
     $parent = Split-Path -Parent $script:RepositoryRoot
@@ -604,6 +631,7 @@ function Prepare-ActiveWorktrees {
     Assert-StableGit
     $mainBranch = [string]$script:Policy.MainBranch
     if ((Current-Branch) -ne $mainBranch) { throw "PrepareActiveWorktrees must start on $mainBranch." }
+    $active = @(Selected-Minecraft-Edit-Branches)
     $pending = Pending-State
     if ($pending.Staged.Count) { throw "Active worktree preparation refuses staged changes: $($pending.Staged -join ', ')." }
     $scopes = if ($Path.Count) { @(Normalize-Paths -Values $Path) } else { @() }
@@ -617,7 +645,6 @@ function Prepare-ActiveWorktrees {
         if ($category -notin @("Shared", "Mixed")) { throw "Overlay path is not main-owned or mixed: $scope ($category)." }
     }
     [void](Assert-Policy -PermitDirty)
-    $active = @(Active-Minecraft-Branches)
     $main = (Invoke-Git -Arguments @("rev-parse", $mainBranch)).Text.Trim()
     foreach ($branch in $active) {
         if ((Invoke-Git -Arguments @("merge-base", "--is-ancestor", $main, $branch) -AllowFailure).ExitCode -ne 0) {
@@ -678,9 +705,10 @@ function Prepare-ActiveWorktrees {
         $prepared.Add([ordered]@{ branch = $branch; path = $target; baseHead = $item.baseHead;
             overlayTree = $actualTree })
     }
-    $manifest = [ordered]@{ operation = "PrepareActiveWorktrees"; format = 1; repository = $script:RepositoryRoot;
+    $manifest = [ordered]@{ operation = "PrepareActiveWorktrees"; format = 2; repository = $script:RepositoryRoot;
         mainBranch = $mainBranch; mainBase = $main; mainOverlayTree = $mainSnapshot.Tree; scopes = $scopes;
-        patch = $patchPath; untracked = @($untracked); worktreeRoot = $managedRoot; worktrees = @($prepared) }
+        patch = $patchPath; untracked = @($untracked); directEditBranches = $active;
+        worktreeRoot = $managedRoot; worktrees = @($prepared) }
     $manifestPath = Write-JsonManifest -Value $manifest -Root $root -Name "manifest.json"
     [ordered]@{ operation = "PrepareActiveWorktrees"; snapshot = $manifestPath; main = $main;
         mainOverlayTree = $mainSnapshot.Tree; worktrees = @($prepared) }
@@ -712,15 +740,19 @@ function Capture-ActiveWorktreeChanges {
                 throw "Version work changed a non-version path on ${branch}: $changed ($category)."
             }
         }
+        if (-not @($snapshot.Paths).Count) {
+            throw "Selected branch has no direct Minecraft edit after removing the main overlay: $branch"
+        }
         $patchPath = Join-Path $root (($branch -replace '[^0-9A-Za-z._+-]', '-') + ".patch")
         Write-PatchFile -Path $patchPath -Text $snapshot.Patch
         $captured.Add([ordered]@{ branch = $branch; path = $worktree; baseHead = $item.baseHead;
             overlayTree = $item.overlayTree; versionTree = $snapshot.Tree; versionPatch = $patchPath;
             versionPaths = @($snapshot.Paths); pendingPaths = @($snapshot.PendingPaths) })
     }
-    $manifest = [ordered]@{ operation = "CaptureActiveWorktreeChanges"; format = 1;
+    $manifest = [ordered]@{ operation = "CaptureActiveWorktreeChanges"; format = 2;
         repository = $script:RepositoryRoot; overlayManifest = $loaded.Path; mainBranch = $overlay.mainBranch;
         mainBase = $overlay.mainBase; mainOverlayTree = $overlay.mainOverlayTree; scopes = @($overlay.scopes);
+        directEditBranches = @($overlay.directEditBranches);
         worktreeRoot = $overlay.worktreeRoot; worktrees = @($captured) }
     $manifestPath = Write-JsonManifest -Value $manifest -Root $root -Name "manifest.json"
     [ordered]@{ operation = "CaptureActiveWorktreeChanges"; snapshot = $manifestPath; worktrees = @($captured) }
@@ -864,14 +896,25 @@ function Merge-Main {
     $capture = $loaded.Value
     $active = @(Active-Minecraft-Branches)
     $capturedBranches = @($capture.worktrees | ForEach-Object { [string]$_.branch })
-    if (($active | ConvertTo-Json -Compress) -ne ($capturedBranches | ConvertTo-Json -Compress)) {
-        throw "Active branch list differs from the capture manifest."
+    $declaredBranches = @($capture.directEditBranches | ForEach-Object { [string]$_ })
+    if ($capturedBranches.Count -lt 2 -or
+        ($capturedBranches | ConvertTo-Json -Compress) -ne ($declaredBranches | ConvertTo-Json -Compress)) {
+        throw "Capture manifest must contain the same two or more declared direct-edit branches."
+    }
+    $inactive = @($capturedBranches | Where-Object { $_ -notin $active })
+    if ($inactive.Count) {
+        throw "Capture manifest contains branches that are no longer active: $($inactive -join ', ')."
     }
     $main = (Invoke-Git -Arguments @("rev-parse", $mainBranch)).Text.Trim()
     $mainTree = (Invoke-Git -Arguments @("rev-parse", "$main^{tree}")).Text.Trim()
     if ($mainTree -ne [string]$capture.mainOverlayTree) { throw "Committed main tree differs from the captured overlay tree." }
-    $parent = (Invoke-Git -Arguments @("rev-parse", "$main^1")).Text.Trim()
-    if ($parent -ne [string]$capture.mainBase) { throw "Committed main parent differs from the overlay base." }
+    $baseTree = (Invoke-Git -Arguments @("rev-parse", "$($capture.mainBase)^{tree}")).Text.Trim()
+    if ([string]$capture.mainOverlayTree -eq $baseTree) {
+        if ($main -ne [string]$capture.mainBase) { throw "Main moved even though the captured task had no main overlay." }
+    } else {
+        $parent = (Invoke-Git -Arguments @("rev-parse", "$main^1")).Text.Trim()
+        if ($parent -ne [string]$capture.mainBase) { throw "Committed main parent differs from the overlay base." }
+    }
     $preflight = [Collections.Generic.List[object]]::new()
     foreach ($item in @($capture.worktrees)) {
         $branch = [string]$item.branch; $target = [string]$item.path
@@ -917,6 +960,119 @@ function Merge-Main {
     $policy = Assert-Policy -PermitDirty
     [ordered]@{ operation = "MergeMain"; main = $main; merged = @($merged); skipped = @();
         finalBranch = Current-Branch; policy = $policy }
+}
+function Propagate-Main {
+    if (-not $ConfirmExecution -or $Authorization -ne "ExplicitUser") {
+        throw "PropagateMain requires explicit authorization and -ConfirmExecution."
+    }
+    Assert-MainExists
+    Assert-StableGit
+    $mainBranch = [string]$script:Policy.MainBranch
+    if ((Current-Branch) -ne $mainBranch) { throw "PropagateMain must start on $mainBranch." }
+    if ((Pending-State).All.Count) { throw "PropagateMain requires a clean primary worktree." }
+    $records = @(Worktree-Records)
+    if ($records.Count -ne 1 -or $records[0].Path -ne [IO.Path]::GetFullPath($script:RepositoryRoot) -or
+        $records[0].Branch -ne $mainBranch) {
+        throw "PropagateMain refuses additional or unexpected Git worktrees."
+    }
+    $active = @(Active-Minecraft-Branches)
+    $main = (Invoke-Git -Arguments @("rev-parse", $mainBranch)).Text.Trim()
+    $baseHeads = [ordered]@{}
+    $required = [Collections.Generic.List[string]]::new()
+    $skipped = [Collections.Generic.List[object]]::new()
+    $shared = @(Normalize-Paths -Values @($script:Policy.SharedPaths | Where-Object { -not $_.EndsWith('-') }))
+    foreach ($branch in $active) {
+        $head = (Invoke-Git -Arguments @("rev-parse", $branch)).Text.Trim()
+        $baseHeads[$branch] = $head
+        if ((Invoke-Git -Arguments @("merge-base", "--is-ancestor", $main, $branch) -AllowFailure).ExitCode -eq 0) {
+            $different = Invoke-Git -Arguments (@("diff", "--quiet", "$main..$branch", "--") + $shared) -AllowFailure
+            if ($different.ExitCode -ne 0) { throw "Already-propagated branch has different shared paths: $branch" }
+            $skipped.Add([ordered]@{ branch = $branch; head = $head; reason = "main-already-ancestor" })
+        } else {
+            $required.Add($branch)
+        }
+    }
+    $preflight = [Collections.Generic.List[object]]::new()
+    foreach ($branch in @($required)) {
+        $temp = Join-Path ([IO.Path]::GetTempPath()) ("main-propagate-preflight-" + [guid]::NewGuid().ToString("N"))
+        [void](New-Item -ItemType Directory -Path $temp)
+        try {
+            $leaf = Split-Path -Leaf $script:RepositoryRoot
+            $clone = Join-Path $temp $leaf
+            [void](Invoke-Git -Root $temp -Arguments @("clone", "--quiet", "--no-hardlinks", "--no-checkout",
+                $script:RepositoryRoot, $clone))
+            [void](Invoke-Git -Root $clone -Arguments @("config", "user.name", "Propagation Preflight"))
+            [void](Invoke-Git -Root $clone -Arguments @("config", "user.email", "preflight@example.invalid"))
+            [void](Invoke-Git -Root $clone -Arguments @("switch", "--quiet", "--detach", "origin/$branch"))
+            if (-not $SkipBuild) {
+                $workspace = Split-Path -Parent $script:RepositoryRoot
+                foreach ($sibling in @($script:Policy.PropagationSiblingRepositories)) {
+                    $source = Join-Path $workspace ([string]$sibling)
+                    if (-not (Test-Path -LiteralPath $source -PathType Container)) {
+                        throw "Propagation sibling repository is missing: $source"
+                    }
+                    $destination = Join-Path $temp ([string]$sibling)
+                    [void](Invoke-Git -Root $temp -Arguments @("clone", "--quiet", "--no-hardlinks", "--no-checkout",
+                        $source, $destination))
+                    $siblingBranch = Invoke-Git -Root $destination -Arguments @("rev-parse", "--verify",
+                        "origin/$branch") -AllowFailure
+                    if ($siblingBranch.ExitCode -ne 0) {
+                        throw "Propagation sibling lacks ${branch}: $sibling"
+                    }
+                    [void](Invoke-Git -Root $destination -Arguments @("switch", "--quiet", "--detach", "origin/$branch"))
+                }
+            }
+            $merge = Invoke-Git -Root $clone -Arguments @("merge", "--no-ff", "--no-commit", "origin/$mainBranch") -AllowFailure
+            if ($merge.ExitCode -ne 0) {
+                throw "Propagation preflight merge failed for ${branch}: $($merge.Text) $($merge.ErrorText)"
+            }
+            $tree = (Invoke-Git -Root $clone -Arguments @("write-tree")).Text.Trim()
+            $validation = Run-Validation -Root $clone -PermitDirty -SkipRepositoryPolicy -ProfileOverride "Minecraft"
+            $preflight.Add([ordered]@{ branch = $branch; baseHead = $baseHeads[$branch];
+                tree = $tree; validation = $validation })
+        } finally {
+            $resolved = [IO.Path]::GetFullPath($temp)
+            $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+            if ($resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -and
+                (Test-Path -LiteralPath $resolved)) {
+                Remove-Item -LiteralPath $resolved -Recurse -Force
+            }
+        }
+    }
+    if ((Invoke-Git -Arguments @("rev-parse", $mainBranch)).Text.Trim() -ne $main) {
+        throw "$mainBranch moved during propagation preflight."
+    }
+    foreach ($item in $preflight) {
+        if ((Invoke-Git -Arguments @("rev-parse", [string]$item.branch)).Text.Trim() -ne [string]$item.baseHead) {
+            throw "Target branch moved during propagation preflight: $($item.branch)"
+        }
+    }
+    $merged = [Collections.Generic.List[object]]::new()
+    try {
+        foreach ($item in $preflight) {
+            $branch = [string]$item.branch
+            [void](Invoke-Git -Arguments @("switch", "--quiet", $branch))
+            $merge = Invoke-Git -Arguments @("merge", "--no-ff", $main, "-m",
+                "Merge branch 'main' into $branch") -AllowFailure
+            if ($merge.ExitCode -ne 0) {
+                [void](Invoke-Git -Arguments @("merge", "--abort") -AllowFailure)
+                throw "Propagation merge failed for ${branch}: $($merge.Text) $($merge.ErrorText)"
+            }
+            $tree = (Invoke-Git -Arguments @("rev-parse", "HEAD^{tree}")).Text.Trim()
+            if ($tree -ne [string]$item.tree) { throw "Propagation tree differs from preflight for $branch." }
+            $merged.Add([ordered]@{ branch = $branch;
+                commit = (Invoke-Git -Arguments @("rev-parse", "HEAD")).Text.Trim(); tree = $tree })
+        }
+    } finally {
+        if ((Current-Branch) -ne $mainBranch) {
+            if (@(In-Progress).Count) { [void](Invoke-Git -Arguments @("merge", "--abort") -AllowFailure) }
+            [void](Invoke-Git -Arguments @("switch", "--quiet", $mainBranch))
+        }
+    }
+    if ((Current-Branch) -ne $mainBranch) { throw "PropagateMain failed to return to $mainBranch." }
+    $policy = Assert-Policy
+    [ordered]@{ operation = "PropagateMain"; main = $main; merged = @($merged); skipped = @($skipped);
+        finalBranch = Current-Branch; worktreeCount = @(Worktree-Records).Count; policy = $policy }
 }
 function Cleanup-ActiveWorktrees {
     if (-not $ConfirmExecution -or $Authorization -ne "ExplicitUser") {
@@ -992,6 +1148,7 @@ try {
         "CompareSnapshot" { Compare-Snapshot }
         "Commit" { Commit-Task }
         "MergeMain" { Merge-Main }
+        "PropagateMain" { Propagate-Main }
         "Push" { Push-Refs }
         "Audit" { $policyResult = Assert-Policy -PermitDirty:$AllowDirty; [ordered]@{ operation = "Audit"; success = $true;
                 inspect = Inspect-Result; policy = $policyResult } }

@@ -26,6 +26,8 @@ Keep A and B together for `A-derived` or `A-required`. Commit isolated A before 
 
 A task-change instruction does not authorize splitting pending main/mc work. Ask for an explicit commit instruction.
 
-For a new feature or fix intended for every branch listed in main's `.agents/active-minecraft-branches.txt`, finish a preceding independent main task before starting. Keep the new task's main-owned changes uncommitted, overlay only its exact paths onto managed branch worktrees, and do not commit the overlay on `mc/*`.
+Count only task-owned files or semantic hunks that must be edited directly on an `mc/*` branch. A main-owned change and a main-to-Minecraft merge are propagation, not Minecraft edits. Main-only work stays on `main`; after its authorized commit, propagate the exact main commit to every active branch without creating worktrees.
 
-Once an explicit cross-cutting commit instruction is received, it authorizes the normal active-worktree capture, exact main commit, verified `--no-ff` main-to-active merges, version-diff restoration and commits, comparison, and clean-worktree cleanup sequence. Stop rather than improvising if any manifest, ref, tree, worktree association, or preflight result differs.
+Use active worktrees only when direct edits are planned for at least two distinct branches listed in main's `.agents/active-minecraft-branches.txt`. Finish a preceding independent main task before starting. Keep the new task's main-owned changes uncommitted, overlay only its exact paths onto the explicitly selected branch worktrees, and do not commit the overlay on `mc/*`.
+
+Once an explicit multi-Minecraft commit instruction is received, it authorizes the normal selected-worktree capture, exact main commit when present, verified `--no-ff` main merges, version-diff restoration and commits, worktree-free propagation to remaining active branches, comparison, and clean-worktree cleanup sequence. Stop rather than improvising if any manifest, ref, tree, worktree association, or preflight result differs.
