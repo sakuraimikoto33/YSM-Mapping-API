@@ -121,7 +121,10 @@ public final class JarStructureAnalyzer {
                 "client model connected invocation");
         ClassNode clientManager = clientStart == null ? null : classesByName.get(clientStart.owner);
         YsmCompatibilityMap.MethodSymbol clientReset = findClientReset(clientManager);
-        YsmCompatibilityMap.MethodSymbol clientModelMap = findClientModelMapGetter(clientManager);
+        YsmCompatibilityMap.MethodSymbol clientModelLookup =
+                findClientModelLookup(clientManager);
+        YsmCompatibilityMap.MethodSymbol clientModelMap = findClientModelMapGetter(
+                clientManager, clientModelLookup);
         YsmCompatibilityMap.MethodSymbol clientCatalogDelta = findClientModelCatalogDeltaCallback(
                 clientManager, clientModelMap);
         YsmCompatibilityMap.MethodSymbol clientPackMap = findClientPackMapGetter(clientManager,
@@ -182,7 +185,7 @@ public final class JarStructureAnalyzer {
                 artifact.ysmVersion(), artifact.sha512(), channel, registration.owner,
                 registration.method, packets, clientSend, channelSetter,
                 symbol(clientStart), symbol(clientConnected), clientReset,
-                clientModelMap, clientCatalogDelta, clientPackMap,
+                clientModelMap, clientModelLookup, clientCatalogDelta, clientPackMap,
                 clientPendingCount, clientFlushPending, clientRawSender,
                 symbol(serverReceive), reload, sync,
                 syncResult.successGetter(), syncResult.errorGetter(),
@@ -403,7 +406,7 @@ public final class JarStructureAnalyzer {
             Map<YsmSymbolKey<?>, String> diagnostics) {
         YsmSymbolKey<?>[] keys = {YsmSymbols.CLIENT_MODEL_START_SYNC,
                 YsmSymbols.CLIENT_MODEL_CONNECTED, YsmSymbols.CLIENT_MODEL_RESET,
-                YsmSymbols.CLIENT_MODEL_MAP_GETTER,
+                YsmSymbols.CLIENT_MODEL_MAP_GETTER, YsmSymbols.CLIENT_MODEL_LOOKUP,
                 YsmSymbols.CLIENT_MODEL_CATALOG_DELTA_CALLBACK,
                 YsmSymbols.CLIENT_PACK_MAP_GETTER, YsmSymbols.CLIENT_PENDING_COUNT_GETTER,
                 YsmSymbols.CLIENT_MODEL_FLUSH_PENDING, YsmSymbols.CLIENT_MODEL_RAW_SENDER};
@@ -421,7 +424,9 @@ public final class JarStructureAnalyzer {
             requireStatic(classes, connected, "client model connect");
             ClassNode manager = classes.get(start.owner);
             YsmCompatibilityMap.MethodSymbol reset = findClientReset(manager);
-            YsmCompatibilityMap.MethodSymbol modelMap = findClientModelMapGetter(manager);
+            YsmCompatibilityMap.MethodSymbol modelLookup = findClientModelLookup(manager);
+            YsmCompatibilityMap.MethodSymbol modelMap = findClientModelMapGetter(
+                    manager, modelLookup);
             YsmCompatibilityMap.MethodSymbol catalog = findClientModelCatalogDeltaCallback(
                     manager, modelMap);
             YsmCompatibilityMap.MethodSymbol packMap = findClientPackMapGetter(manager, modelMap);
@@ -438,6 +443,7 @@ public final class JarStructureAnalyzer {
             putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_CONNECTED, symbol(connected));
             putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_RESET, reset);
             putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_MAP_GETTER, modelMap);
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_LOOKUP, modelLookup);
             putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_CATALOG_DELTA_CALLBACK, catalog);
             putMethod(values, diagnostics, YsmSymbols.CLIENT_PACK_MAP_GETTER, packMap);
             putMethod(values, diagnostics, YsmSymbols.CLIENT_PENDING_COUNT_GETTER, pending);
@@ -1213,18 +1219,31 @@ public final class JarStructureAnalyzer {
         return false;
     }
 
-    private static YsmCompatibilityMap.MethodSymbol findClientModelMapGetter(ClassNode clientManager)
+    static YsmCompatibilityMap.MethodSymbol findClientModelLookup(ClassNode clientManager)
             throws IOException {
         if (clientManager == null) {
             throw new IOException("Missing client model manager");
         }
-        String modelField = clientManager.methods.stream()
-                .filter(method -> isStatic(method)
-                        && method.desc.equals("(Ljava/lang/String;)Ljava/util/Optional;"))
-                .flatMap(method -> fieldReads(method, clientManager.name).stream())
+        return findUniqueDeclared(clientManager,
+                method -> isStatic(method) && isPublic(method) && !isNative(method)
+                        && method.desc.equals(
+                        "(Ljava/lang/String;)Ljava/util/Optional;")
+                        && fieldReads(method, clientManager.name).stream()
+                        .anyMatch(field -> field.desc.equals("Ljava/util/Map;")),
+                "client model lookup");
+    }
+
+    private static YsmCompatibilityMap.MethodSymbol findClientModelMapGetter(
+            ClassNode clientManager, YsmCompatibilityMap.MethodSymbol modelLookup)
+            throws IOException {
+        MethodNode lookup = findMethod(clientManager, modelLookup);
+        List<FieldReference> modelFields = fieldReads(lookup, clientManager.name).stream()
                 .filter(field -> field.desc.equals("Ljava/util/Map;"))
-                .map(FieldReference::name).findFirst()
-                .orElseThrow(() -> new IOException("Missing client model map lookup"));
+                .distinct().toList();
+        if (modelFields.size() != 1) {
+            throw new IOException("Client model lookup must read exactly one Map field");
+        }
+        String modelField = modelFields.get(0).name();
         return findUniqueDeclared(clientManager,
                 method -> isStatic(method) && isPublic(method)
                         && method.desc.equals("()Ljava/util/Map;")

@@ -65,6 +65,8 @@ public final class YsmSymbols {
             methodKey("ysm.client.model_manager.reset.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_MAP_GETTER =
             methodKey("ysm.client.model_manager.model_map_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_LOOKUP =
+            methodKey("ysm.client.model_manager.model_lookup.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_CATALOG_DELTA_CALLBACK =
             methodKey("ysm.client.model_manager.catalog_delta_callback.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_PACK_MAP_GETTER =
