@@ -1,5 +1,8 @@
 # YSM Mapping API
 
+> [!CAUTION]
+> 現在開発中のため破壊的変更をする可能性があります。
+
 YSM Mapping APIは、導入済みYes Steve Model（YSM）の難読化されたclass、method、fieldを構造解析し、他のmodへ型付きsymbolとして提供する前提modです。
 
 ## 対応環境
