@@ -1,5 +1,8 @@
 # YSM Mapping API
 
+> [!CAUTION]
+> 現在開発中のため破壊的変更をする可能性があります。
+
 YSM Mapping APIは、Yes Steve Model（YSM）のclass、method、fieldを構造解析し、型付きsymbolとして扱うための基盤です。
 
 `main`ではMinecraftやloaderに依存しない共有実装を管理します。
