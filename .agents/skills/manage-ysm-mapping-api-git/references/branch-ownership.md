@@ -6,6 +6,8 @@ Read this reference only for ownership questions, mixed root files, or work span
 
 Commit repository instructions, `.agents/`, `.gitignore`, Gradle wrapper files, shared Gradle foundations, `api-core/`, `analysis-core/`, shared mapping tools, and shared API/analysis/tooling documentation on `main`. In particular, edit and commit `.agents/active-minecraft-branches.txt` only on `main`; version branches receive it only through a main merge.
 
+`.github/workflows/release.yml` is main-only. Propagation merges must remove it from every active `mc/*` branch instead of copying it with the rest of `.github/`.
+
 ## Minecraft branches
 
 Commit `api/`, `common/`, `fabric/`, `forge/`, `neoforge/`, Minecraft-specific documentation, mapping profiles and fixture expectations, loader integration, and Minecraft-specific configuration on the matching `mc/<minecraft-version>` branch.
