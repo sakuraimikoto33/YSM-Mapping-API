@@ -3,6 +3,7 @@
     SharedPaths = @(
         "AGENTS.md"
         ".agents"
+        ".github"
         ".gitignore"
         "gradle"
         "gradlew"
