@@ -1,6 +1,5 @@
 ## Always-On Rules
 
-- Never pass `autoResolutionMs` to `request_user_input`.
 - Preserve user changes. Never discard, overwrite, stage, or commit unrelated work.
 - Run `.agents/skills/manage-ysm-mapping-api-git/scripts/repository-workflow.ps1 -Operation Inspect` at the start of repository work; use its result before choosing a branch or editing.
 - Use active cross-version worktrees only when task-owned files or hunks will be edited directly on at least two actively maintained `mc/*` branches. Read eligible branches from main's `.agents/active-minecraft-branches.txt`; a main change or main-to-Minecraft merge never counts as a direct Minecraft edit.
@@ -14,3 +13,7 @@
 - Never track or distribute proprietary YSM artifacts or private-derived runtime names, graphs, native libraries, or decompiler output.
 - Do not push without an explicit remote/ref instruction. Ordinary push permission never authorizes force or force-with-lease.
 - After changing Git or history instruction assets, run `.agents/skills/manage-ysm-mapping-api-git/scripts/verify-skill-parity.ps1` and its fixture.
+
+## User Input
+
+- When calling the `request_user_input` tool, never set `autoResolutionMs`. Wait for the user to answer explicitly.
