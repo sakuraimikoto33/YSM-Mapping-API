@@ -72,10 +72,14 @@ try {
     Install-RepositoryProfile $repo
 
     $shared = [string]$policy.SharedPaths[0]
+    $mainOnly = if ($policy.Contains("MainOnlyPaths") -and @($policy.MainOnlyPaths).Count) {
+        [string]$policy.MainOnlyPaths[0]
+    } else { "" }
     $versionScope = [string]$policy.VersionPaths[0]
     $mixed = [string]$policy.MixedPaths[0]
     $activeFile = [string]$policy.ActiveMinecraftBranchesFile
     Set-File $repo $shared "shared`n"
+    if ($mainOnly) { Set-File $repo $mainOnly "main only`n" }
     Set-File $repo $mixed "mixed`n"
     Set-File $repo $activeFile "mc/1.21.1`n"
     Set-File $repo ".agents/overlay-shared.txt" "shared base`n"
@@ -109,6 +113,10 @@ try {
     Assert-True ($categories[$versionScope] -eq "Minecraft") "Minecraft classification failed."
     Assert-True ($categories[$mixed] -eq "Mixed") "Mixed classification failed."
     Assert-True ($categories["unknown.txt"] -eq "Unknown") "Unknown classification failed."
+    if ($mainOnly) {
+        $classification = Invoke-Workflow $repo @("-Operation", "Classify", "-Path", $mainOnly)
+        Assert-True ($classification.Json.paths[0].category -eq "MainOnly") "Main-only classification failed."
+    }
     foreach ($candidate in @($policy.SharedPaths)) {
         $classification = Invoke-Workflow $repo @("-Operation", "Classify", "-Path", [string]$candidate)
         Assert-True ($classification.Json.paths[0].category -eq "Shared") "Shared profile path was misclassified: $candidate"
@@ -158,6 +166,10 @@ try {
     Assert-True ($created.Json.branch -eq "mc/1.22.0") "New branch was not checked out."
     Assert-True ((Git $repo @("merge-base", "--is-ancestor", "main", "mc/1.22.0") -AllowFailure).ExitCode -eq 0) "main is not an ancestor."
     Assert-True ((Git $repo @("show", "mc/1.22.0:main-marker.txt") -AllowFailure).ExitCode -eq 0) "main content is missing."
+    if ($mainOnly) {
+        Assert-True ((Git $repo @("cat-file", "-e", "mc/1.22.0`:$mainOnly") -AllowFailure).ExitCode -ne 0) `
+            "New Minecraft branch retained a main-only path."
+    }
 
     Set-File $repo (Join-Path $versionScope "value.txt") "pending`n"
     $snapshot = Invoke-Workflow $repo @("-Operation", "Snapshot", "-Path", $versionScope)
@@ -274,8 +286,26 @@ try {
     Assert-True ([int]$propagated.Json.worktreeCount -eq $worktreeCountBefore) "Main-only propagation changed worktree count."
     foreach ($branch in @("mc/1.21.1", "mc/1.22.0")) {
         Assert-True ((Git $repo @("rev-parse", "$branch^2")).Text.Trim() -eq $propagatedMain) "Propagation was not a no-ff main merge."
+        if ($mainOnly) {
+            Assert-True ((Git $repo @("cat-file", "-e", "${branch}:$mainOnly") -AllowFailure).ExitCode -ne 0) `
+                "Propagation retained a main-only path on $branch."
+        }
     }
     Assert-True ((Git $repo @("rev-parse", "mc/inactive")).Text.Trim() -eq $inactiveTip) "Propagation moved an inactive branch."
+    if ($mainOnly) {
+        Set-File $repo $mainOnly "main-only update`n"
+        [void](Git $repo @("add", $mainOnly)); [void](Git $repo @("commit", "-q", "-m", "Update main-only fixture"))
+        $mainOnlyUpdate = (Git $repo @("rev-parse", "main")).Text.Trim()
+        $mainOnlyPropagation = Invoke-Workflow $repo @("-Operation", "PropagateMain", "-Authorization", "ExplicitUser",
+            "-ConfirmExecution", "-SkipBuild")
+        Assert-True (@($mainOnlyPropagation.Json.merged).Count -eq 2) "Main-only modify/delete conflicts were not propagated."
+        foreach ($branch in @("mc/1.21.1", "mc/1.22.0")) {
+            Assert-True ((Git $repo @("rev-parse", "$branch^2")).Text.Trim() -eq $mainOnlyUpdate) `
+                "Main-only update was not represented by a no-ff merge on $branch."
+            Assert-True ((Git $repo @("cat-file", "-e", "${branch}:$mainOnly") -AllowFailure).ExitCode -ne 0) `
+                "Main-only update reintroduced its path on $branch."
+        }
+    }
     $tipsBeforeOverlay = @{}
     foreach ($ref in @("main", "mc/1.21.1", "mc/1.22.0", "mc/inactive")) {
         $tipsBeforeOverlay[$ref] = (Git $repo @("rev-parse", $ref)).Text.Trim()

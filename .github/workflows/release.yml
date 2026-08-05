@@ -3,21 +3,13 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: Tag to create for the release (for example, v0.1.0)
-        required: true
-        type: string
-      release_name:
-        description: Release title (defaults to the tag)
-        required: false
-        type: string
       prerelease:
-        description: Mark the release as a prerelease
+        description: Mark each release as a prerelease
         required: true
         default: false
         type: boolean
       draft:
-        description: Create the release as a draft
+        description: Create each release as a draft
         required: true
         default: false
         type: boolean
@@ -26,12 +18,17 @@ permissions:
   actions: read
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   prepare:
-    name: Read active Minecraft branches
+    name: Select unreleased branches
     runs-on: ubuntu-latest
     outputs:
-      branches: ${{ steps.branches.outputs.branches }}
+      build_matrix: ${{ steps.release.outputs.build_matrix }}
+      release_matrix: ${{ steps.release.outputs.release_matrix }}
       default_branch: ${{ github.event.repository.default_branch }}
 
     steps:
@@ -40,11 +37,18 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
 
-      - name: Read and validate branch list
-        id: branches
+      - name: Select branches whose modVersion is not released
+        id: release
         shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
+
+          if [[ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]]; then
+            echo "::error::Run the Release workflow from the default branch: $DEFAULT_BRANCH"
+            exit 1
+          fi
 
           branch_file=".agents/active-minecraft-branches.txt"
           if [[ ! -f "$branch_file" ]]; then
@@ -67,28 +71,96 @@ jobs:
             exit 1
           fi
 
+          build_matrix='[]'
+          release_matrix='[]'
+          declare -A version_state=()
+
           for branch in "${branches[@]}"; do
             if [[ ! "$branch" =~ ^mc/[0-9A-Za-z._-]+$ ]]; then
               echo "::error file=$branch_file::Invalid Minecraft branch: $branch"
               exit 1
             fi
-            if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" > /dev/null; then
-              echo "::error file=$branch_file::Remote branch does not exist: $branch"
+
+            if ! git fetch --quiet --no-tags --depth=1 origin \
+              "+refs/heads/$branch:refs/remotes/origin/$branch"; then
+              echo "::error file=$branch_file::Remote branch does not exist or could not be fetched: $branch"
               exit 1
+            fi
+
+            properties="$(git show "refs/remotes/origin/$branch:gradle.properties")"
+            mapfile -t mod_versions < <(
+              printf '%s\n' "$properties" |
+                sed -n 's/^modVersion[[:space:]]*=[[:space:]]*\([^[:space:]]\+\)[[:space:]]*$/\1/p'
+            )
+            if (( ${#mod_versions[@]} != 1 )) || [[ -z "${mod_versions[0]}" ]]; then
+              echo "::error::$branch must define modVersion exactly once in gradle.properties."
+              exit 1
+            fi
+
+            mod_version="${mod_versions[0]}"
+            if ! git check-ref-format "refs/tags/$mod_version"; then
+              echo "::error::$branch has a modVersion that is not a valid Git tag: $mod_version"
+              exit 1
+            fi
+
+            if [[ -z "${version_state[$mod_version]+present}" ]]; then
+              set +e
+              git ls-remote --exit-code --tags origin "refs/tags/$mod_version" > /dev/null
+              tag_status=$?
+              set -e
+              if (( tag_status == 0 )); then
+                version_state[$mod_version]="released"
+              elif (( tag_status == 2 )); then
+                version_state[$mod_version]="new"
+              else
+                echo "::error::Unable to check whether release tag exists: $mod_version"
+                exit "$tag_status"
+              fi
+            fi
+
+            if [[ "${version_state[$mod_version]}" == "released" ]]; then
+              echo "::notice::$branch is skipped because tag $mod_version already exists."
+              continue
+            fi
+
+            version_key="$(printf '%s' "$mod_version" | sha256sum | cut -c1-16)"
+            safe_branch="${branch//\//-}"
+            build_entry="$(jq -cn \
+              --arg branch "$branch" \
+              --arg mod_version "$mod_version" \
+              --arg version_key "$version_key" \
+              --arg safe_branch "$safe_branch" \
+              '{branch: $branch, mod_version: $mod_version, version_key: $version_key, safe_branch: $safe_branch}')"
+            build_matrix="$(jq -cn --argjson current "$build_matrix" --argjson entry "$build_entry" \
+              '$current + [$entry]')"
+
+            if ! jq -e --arg version "$mod_version" \
+              'any(.[]; .mod_version == $version)' <<< "$release_matrix" > /dev/null; then
+              release_entry="$(jq -cn \
+                --arg mod_version "$mod_version" \
+                --arg artifact_pattern "release-$version_key-*" \
+                '{mod_version: $mod_version, artifact_pattern: $artifact_pattern}')"
+              release_matrix="$(jq -cn --argjson current "$release_matrix" --argjson entry "$release_entry" \
+                '$current + [$entry]')"
             fi
           done
 
-          branches_json="$(printf '%s\n' "${branches[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')"
-          echo "branches=$branches_json" >> "$GITHUB_OUTPUT"
+          if [[ "$(jq 'length' <<< "$build_matrix")" == "0" ]]; then
+            echo "::error::Every active Minecraft branch already has a release tag for its modVersion."
+            exit 1
+          fi
+
+          echo "build_matrix=$build_matrix" >> "$GITHUB_OUTPUT"
+          echo "release_matrix=$release_matrix" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build ${{ matrix.branch }}
+    name: Build ${{ matrix.branch }} (${{ matrix.mod_version }})
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        branch: ${{ fromJSON(needs.prepare.outputs.branches) }}
+        include: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
 
     steps:
       - name: Checkout ${{ matrix.branch }}
@@ -119,26 +191,37 @@ jobs:
           build
 
       - name: Collect release assets
-        id: assets
         shell: bash
         env:
           BRANCH_NAME: ${{ matrix.branch }}
+          EXPECTED_MOD_VERSION: ${{ matrix.mod_version }}
         run: |
           set -euo pipefail
           shopt -s nullglob
 
-          mkdir release-assets
-          candidates=(
-            fabric/build/libs/*.jar
-            forge/build/libs/*.jar
-            neoforge/build/libs/*.jar
-          )
+          minecraft_version="$(sed -n 's/^minecraftVersion[[:space:]]*=[[:space:]]*//p' gradle.properties)"
+          mod_version="$(sed -n 's/^modVersion[[:space:]]*=[[:space:]]*//p' gradle.properties)"
+          if [[ -z "$minecraft_version" || -z "$mod_version" ]]; then
+            echo "::error file=gradle.properties::minecraftVersion or modVersion is missing."
+            exit 1
+          fi
+          if [[ "$mod_version" != "$EXPECTED_MOD_VERSION" ]]; then
+            echo "::error file=gradle.properties::$BRANCH_NAME changed modVersion after release selection."
+            exit 1
+          fi
 
-          for file in "${candidates[@]}"; do
-            if [[ "$file" == *-sources.jar ]]; then
+          mkdir release-assets
+          for loader in fabric forge neoforge; do
+            if [[ ! -d "$loader" ]]; then
               continue
             fi
-            cp "$file" release-assets/
+
+            jar="$loader/build/libs/ysm-mapping-api-${loader}-${minecraft_version}-${mod_version}.jar"
+            if [[ ! -f "$jar" ]]; then
+              echo "::error::Expected loader JAR was not produced: $jar"
+              exit 1
+            fi
+            cp "$jar" release-assets/
           done
 
           assets=(release-assets/*.jar)
@@ -147,20 +230,17 @@ jobs:
             exit 1
           fi
 
-          safe_branch="${BRANCH_NAME//\//-}"
-          echo "artifact_name=release-${safe_branch}" >> "$GITHUB_OUTPUT"
-
       - name: Upload release assets
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.assets.outputs.artifact_name }}
+          name: release-${{ matrix.version_key }}-${{ matrix.safe_branch }}
           path: release-assets/*.jar
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
 
   release:
-    name: Create GitHub release
+    name: Release ${{ matrix.mod_version }}
     needs:
       - prepare
       - build
@@ -168,12 +248,16 @@ jobs:
     permissions:
       actions: read
       contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.release_matrix) }}
 
     steps:
       - name: Download release assets
         uses: actions/download-artifact@v8
         with:
-          pattern: release-*
+          pattern: ${{ matrix.artifact_pattern }}
           path: downloaded-assets
 
       - name: Assemble release assets
@@ -206,8 +290,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ inputs.tag }}
-          RELEASE_NAME: ${{ inputs.release_name }}
+          TAG: ${{ matrix.mod_version }}
           DEFAULT_BRANCH: ${{ needs.prepare.outputs.default_branch }}
           DRAFT: ${{ inputs.draft }}
           PRERELEASE: ${{ inputs.prerelease }}
@@ -215,16 +298,25 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
 
-          title="$RELEASE_NAME"
-          if [[ -z "$title" ]]; then
-            title="$TAG"
+          encoded_tag="$(jq -rn --arg tag "$TAG" '$tag | @uri')"
+          set +e
+          tag_lookup="$(gh api "repos/$GH_REPO/git/ref/tags/$encoded_tag" 2>&1)"
+          tag_status=$?
+          set -e
+          if (( tag_status == 0 )); then
+            echo "::notice::Release $TAG is skipped because its tag was created after preparation."
+            exit 0
+          fi
+          if [[ "$tag_lookup" != *"HTTP 404"* ]]; then
+            printf '%s\n' "$tag_lookup" >&2
+            exit "$tag_status"
           fi
 
           assets=(release-assets/*.jar)
           release_args=(
             "$TAG"
             "${assets[@]}"
-            --title "$title"
+            --title "$TAG"
             --target "$DEFAULT_BRANCH"
             --generate-notes
           )
