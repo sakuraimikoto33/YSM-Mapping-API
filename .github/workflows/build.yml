@@ -39,12 +39,42 @@ jobs:
           -Dorg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64,JAVA_HOME_21_X64
           build
 
-      - name: Choose artifact name
+      - name: Collect loader artifacts
         id: artifact
         shell: bash
         env:
           BRANCH_NAME: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          minecraft_version="$(sed -n 's/^minecraftVersion[[:space:]]*=[[:space:]]*//p' gradle.properties)"
+          mod_version="$(sed -n 's/^modVersion[[:space:]]*=[[:space:]]*//p' gradle.properties)"
+          if [[ -z "$minecraft_version" || -z "$mod_version" ]]; then
+            echo "::error file=gradle.properties::minecraftVersion or modVersion is missing."
+            exit 1
+          fi
+
+          mkdir loader-artifacts
+          for loader in fabric forge neoforge; do
+            if [[ ! -d "$loader" ]]; then
+              continue
+            fi
+
+            jar="$loader/build/libs/ysm-mapping-api-${loader}-${minecraft_version}-${mod_version}.jar"
+            if [[ ! -f "$jar" ]]; then
+              echo "::error::Expected loader JAR was not produced: $jar"
+              exit 1
+            fi
+            cp "$jar" loader-artifacts/
+          done
+
+          artifacts=(loader-artifacts/*.jar)
+          if (( ${#artifacts[@]} == 0 )); then
+            echo "::error::No Fabric, Forge, or NeoForge main JAR was produced."
+            exit 1
+          fi
+
           safe_branch="${BRANCH_NAME//\//-}"
           echo "name=ysm-mapping-api-${safe_branch}-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
@@ -52,8 +82,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact.outputs.name }}
-          path: |
-            **/build/libs/*.jar
+          path: loader-artifacts/*.jar
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

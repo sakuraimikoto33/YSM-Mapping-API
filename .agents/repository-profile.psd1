@@ -1,5 +1,8 @@
 @{
     Name = "YSM-Mapping-API"
+    MainOnlyPaths = @(
+        ".github/workflows/release.yml"
+    )
     SharedPaths = @(
         "AGENTS.md"
         ".agents"
