@@ -109,6 +109,9 @@ jobs:
         with:
           cache-provider: basic
 
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
       - name: Build
         run: >-
           ./gradlew --no-daemon
