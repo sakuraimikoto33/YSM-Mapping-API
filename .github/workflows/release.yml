@@ -29,7 +29,6 @@ jobs:
     outputs:
       build_matrix: ${{ steps.release.outputs.build_matrix }}
       release_matrix: ${{ steps.release.outputs.release_matrix }}
-      default_branch: ${{ github.event.repository.default_branch }}
 
     steps:
       - name: Checkout the default branch
@@ -73,7 +72,7 @@ jobs:
 
           build_matrix='[]'
           release_matrix='[]'
-          declare -A version_state=()
+          declare -A tag_state=()
 
           for branch in "${branches[@]}"; do
             if [[ ! "$branch" =~ ^mc/[0-9A-Za-z._-]+$ ]]; then
@@ -92,61 +91,73 @@ jobs:
               printf '%s\n' "$properties" |
                 sed -n 's/^modVersion[[:space:]]*=[[:space:]]*\([^[:space:]]\+\)[[:space:]]*$/\1/p'
             )
-            if (( ${#mod_versions[@]} != 1 )) || [[ -z "${mod_versions[0]}" ]]; then
-              echo "::error::$branch must define modVersion exactly once in gradle.properties."
+            mapfile -t minecraft_versions < <(
+              printf '%s\n' "$properties" |
+                sed -n 's/^minecraftVersion[[:space:]]*=[[:space:]]*\([^[:space:]]\+\)[[:space:]]*$/\1/p'
+            )
+            if (( ${#mod_versions[@]} != 1 )) || [[ -z "${mod_versions[0]}" ]] ||
+              (( ${#minecraft_versions[@]} != 1 )) || [[ -z "${minecraft_versions[0]}" ]]; then
+              echo "::error::$branch must define modVersion and minecraftVersion exactly once in gradle.properties."
               exit 1
             fi
 
             mod_version="${mod_versions[0]}"
-            if ! git check-ref-format "refs/tags/$mod_version"; then
-              echo "::error::$branch has a modVersion that is not a valid Git tag: $mod_version"
+            minecraft_version="${minecraft_versions[0]}"
+            release_tag="${mod_version}-mc${minecraft_version}"
+            if ! git check-ref-format "refs/tags/$release_tag"; then
+              echo "::error::$branch produces an invalid release tag: $release_tag"
               exit 1
             fi
 
-            if [[ -z "${version_state[$mod_version]+present}" ]]; then
+            if [[ -z "${tag_state[$release_tag]+present}" ]]; then
               set +e
-              git ls-remote --exit-code --tags origin "refs/tags/$mod_version" > /dev/null
+              git ls-remote --exit-code --tags origin "refs/tags/$release_tag" > /dev/null
               tag_status=$?
               set -e
               if (( tag_status == 0 )); then
-                version_state[$mod_version]="released"
+                tag_state[$release_tag]="released"
               elif (( tag_status == 2 )); then
-                version_state[$mod_version]="new"
+                tag_state[$release_tag]="new"
               else
-                echo "::error::Unable to check whether release tag exists: $mod_version"
+                echo "::error::Unable to check whether release tag exists: $release_tag"
                 exit "$tag_status"
               fi
             fi
 
-            if [[ "${version_state[$mod_version]}" == "released" ]]; then
-              echo "::notice::$branch is skipped because tag $mod_version already exists."
+            if [[ "${tag_state[$release_tag]}" == "released" ]]; then
+              echo "::notice::$branch is skipped because tag $release_tag already exists."
               continue
             fi
 
-            version_key="$(printf '%s' "$mod_version" | sha256sum | cut -c1-16)"
+            target_sha="$(git rev-parse "refs/remotes/origin/$branch")"
+            tag_key="$(printf '%s' "$release_tag" | sha256sum | cut -c1-16)"
             safe_branch="${branch//\//-}"
+            artifact_name="release-${tag_key}-${safe_branch}"
             build_entry="$(jq -cn \
               --arg branch "$branch" \
               --arg mod_version "$mod_version" \
-              --arg version_key "$version_key" \
-              --arg safe_branch "$safe_branch" \
-              '{branch: $branch, mod_version: $mod_version, version_key: $version_key, safe_branch: $safe_branch}')"
+              --arg minecraft_version "$minecraft_version" \
+              --arg release_tag "$release_tag" \
+              --arg target_sha "$target_sha" \
+              --arg artifact_name "$artifact_name" \
+              '{branch: $branch, mod_version: $mod_version, minecraft_version: $minecraft_version, release_tag: $release_tag, target_sha: $target_sha, artifact_name: $artifact_name}')"
             build_matrix="$(jq -cn --argjson current "$build_matrix" --argjson entry "$build_entry" \
               '$current + [$entry]')"
 
-            if ! jq -e --arg version "$mod_version" \
-              'any(.[]; .mod_version == $version)' <<< "$release_matrix" > /dev/null; then
-              release_entry="$(jq -cn \
-                --arg mod_version "$mod_version" \
-                --arg artifact_pattern "release-$version_key-*" \
-                '{mod_version: $mod_version, artifact_pattern: $artifact_pattern}')"
-              release_matrix="$(jq -cn --argjson current "$release_matrix" --argjson entry "$release_entry" \
-                '$current + [$entry]')"
-            fi
+            release_entry="$(jq -cn \
+              --arg branch "$branch" \
+              --arg mod_version "$mod_version" \
+              --arg minecraft_version "$minecraft_version" \
+              --arg release_tag "$release_tag" \
+              --arg target_sha "$target_sha" \
+              --arg artifact_name "$artifact_name" \
+              '{branch: $branch, mod_version: $mod_version, minecraft_version: $minecraft_version, release_tag: $release_tag, target_sha: $target_sha, artifact_name: $artifact_name}')"
+            release_matrix="$(jq -cn --argjson current "$release_matrix" --argjson entry "$release_entry" \
+              '$current + [$entry]')"
           done
 
           if [[ "$(jq 'length' <<< "$build_matrix")" == "0" ]]; then
-            echo "::error::Every active Minecraft branch already has a release tag for its modVersion."
+            echo "::error::Every active Minecraft branch already has a release tag for its modVersion and minecraftVersion."
             exit 1
           fi
 
@@ -154,7 +165,7 @@ jobs:
           echo "release_matrix=$release_matrix" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build ${{ matrix.branch }} (${{ matrix.mod_version }})
+    name: Build ${{ matrix.branch }} (${{ matrix.release_tag }})
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -166,7 +177,7 @@ jobs:
       - name: Checkout ${{ matrix.branch }}
         uses: actions/checkout@v7
         with:
-          ref: ${{ matrix.branch }}
+          ref: ${{ matrix.target_sha }}
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -195,6 +206,7 @@ jobs:
         env:
           BRANCH_NAME: ${{ matrix.branch }}
           EXPECTED_MOD_VERSION: ${{ matrix.mod_version }}
+          EXPECTED_MINECRAFT_VERSION: ${{ matrix.minecraft_version }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -207,6 +219,10 @@ jobs:
           fi
           if [[ "$mod_version" != "$EXPECTED_MOD_VERSION" ]]; then
             echo "::error file=gradle.properties::$BRANCH_NAME changed modVersion after release selection."
+            exit 1
+          fi
+          if [[ "$minecraft_version" != "$EXPECTED_MINECRAFT_VERSION" ]]; then
+            echo "::error file=gradle.properties::$BRANCH_NAME changed minecraftVersion after release selection."
             exit 1
           fi
 
@@ -233,14 +249,14 @@ jobs:
       - name: Upload release assets
         uses: actions/upload-artifact@v7
         with:
-          name: release-${{ matrix.version_key }}-${{ matrix.safe_branch }}
+          name: ${{ matrix.artifact_name }}
           path: release-assets/*.jar
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
 
   release:
-    name: Release ${{ matrix.mod_version }}
+    name: Release ${{ matrix.release_tag }} from ${{ matrix.branch }}
     needs:
       - prepare
       - build
@@ -254,10 +270,17 @@ jobs:
         include: ${{ fromJSON(needs.prepare.outputs.release_matrix) }}
 
     steps:
+      - name: Checkout release history for ${{ matrix.branch }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.target_sha }}
+          fetch-depth: 0
+          fetch-tags: true
+
       - name: Download release assets
         uses: actions/download-artifact@v8
         with:
-          pattern: ${{ matrix.artifact_pattern }}
+          name: ${{ matrix.artifact_name }}
           path: downloaded-assets
 
       - name: Assemble release assets
@@ -285,13 +308,38 @@ jobs:
           printf 'Release assets:\n'
           printf '  %s\n' "${assets[@]}"
 
+      - name: Write commit history link
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+          MINECRAFT_VERSION: ${{ matrix.minecraft_version }}
+          TARGET_SHA: ${{ matrix.target_sha }}
+        run: |
+          set -euo pipefail
+
+          previous_tag="$(git describe --tags --abbrev=0 \
+            --match "*-mc${MINECRAFT_VERSION}" "$TARGET_SHA" 2> /dev/null || true)"
+          if [[ -n "$previous_tag" ]]; then
+            encoded_previous="$(jq -rn --arg value "$previous_tag" '$value | @uri')"
+            encoded_target="$(jq -rn --arg value "$TARGET_SHA" '$value | @uri')"
+            history_url="https://github.com/$GH_REPO/compare/${encoded_previous}...${encoded_target}"
+          else
+            encoded_target="$(jq -rn --arg value "$TARGET_SHA" '$value | @uri')"
+            history_url="https://github.com/$GH_REPO/commits/${encoded_target}"
+          fi
+
+          printf '[Full Changelog](%s)\n' "$history_url" > release-notes.md
+
+          cat release-notes.md
+
       - name: Create release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ matrix.mod_version }}
-          DEFAULT_BRANCH: ${{ needs.prepare.outputs.default_branch }}
+          TAG: ${{ matrix.release_tag }}
+          TARGET_BRANCH: ${{ matrix.branch }}
+          TARGET_SHA: ${{ matrix.target_sha }}
           DRAFT: ${{ inputs.draft }}
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
@@ -317,9 +365,11 @@ jobs:
             "$TAG"
             "${assets[@]}"
             --title "$TAG"
-            --target "$DEFAULT_BRANCH"
-            --generate-notes
+            --target "$TARGET_SHA"
+            --notes-file release-notes.md
           )
+
+          echo "Creating tag $TAG at $TARGET_BRANCH ($TARGET_SHA)."
 
           if [[ "$DRAFT" == "true" ]]; then
             release_args+=(--draft)
