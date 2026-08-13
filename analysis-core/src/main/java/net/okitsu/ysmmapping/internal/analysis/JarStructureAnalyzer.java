@@ -213,15 +213,19 @@ public final class JarStructureAnalyzer {
     public PartialAnalysis analyzePartial(YsmArtifact artifact, YsmClassIndex index)
             throws IOException {
         validateTarget(artifact);
+        List<ClassNode> classes = index.classes();
+        Map<String, ClassNode> byName = new HashMap<>();
+        classes.forEach(node -> byName.put(node.name, node));
         try {
-            return new PartialAnalysis(SymbolMappings.from(analyze(artifact, index)), Map.of());
+            Map<YsmSymbolKey<?>, YsmResolvedSymbol> values = new LinkedHashMap<>(
+                    SymbolMappings.from(analyze(artifact, index)));
+            Map<YsmSymbolKey<?>, String> diagnostics = new LinkedHashMap<>();
+            recoverClientTextureCache(byName, values, diagnostics);
+            return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
         } catch (StructuralAnalysisException ignored) {
             // Recover independent groups below; an individual failure is recorded per key.
         }
 
-        List<ClassNode> classes = index.classes();
-        Map<String, ClassNode> byName = new HashMap<>();
-        classes.forEach(node -> byName.put(node.name, node));
         Map<YsmSymbolKey<?>, YsmResolvedSymbol> values = new LinkedHashMap<>();
         Map<YsmSymbolKey<?>, String> diagnostics = new LinkedHashMap<>();
 
@@ -264,6 +268,7 @@ public final class JarStructureAnalyzer {
             recoverAnimation(byName, registration.symbols, values, diagnostics);
             recoverPlayerState(byName, registration.symbols, values, diagnostics);
             recoverClientManager(byName, registration.symbols, values, diagnostics);
+            recoverClientTextureCache(byName, values, diagnostics);
             recoverServerManager(byName, registration.symbols, values, diagnostics);
         }
 
@@ -452,6 +457,177 @@ public final class JarStructureAnalyzer {
         } catch (IOException | RuntimeException exception) {
             fail(diagnostics, exception, keys);
         }
+    }
+
+    /**
+     * Recover the official client's in-memory texture cache path from the model
+     * lookup method. The manager itself contains a small default-texture helper
+     * whose bytecode forms a stable chain across supported releases:
+     * model -&gt; model data -&gt; ordered texture map -&gt; AbstractTexture -&gt;
+     * cache lease -&gt; Optional&lt;ResourceLocation&gt;.
+     */
+    private static void recoverClientTextureCache(Map<String, ClassNode> classes,
+            Map<YsmSymbolKey<?>, YsmResolvedSymbol> values,
+            Map<YsmSymbolKey<?>, String> diagnostics) {
+        YsmSymbolKey<?>[] keys = {YsmSymbols.CLIENT_MODEL_DATA_GETTER,
+                YsmSymbols.CLIENT_MODEL_TEXTURES_GETTER,
+                YsmSymbols.CLIENT_TEXTURE_CACHE_ACQUIRE,
+                YsmSymbols.CLIENT_TEXTURE_LOCATION_GETTER};
+        try {
+            YsmResolvedSymbol resolved = values.get(YsmSymbols.CLIENT_MODEL_LOOKUP);
+            if (!(resolved instanceof YsmMethodSymbol lookup)) {
+                throw new IOException("Client model lookup is unavailable");
+            }
+            ClientTextureCacheSymbols result = findClientTextureCacheSymbols(classes, lookup);
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_DATA_GETTER,
+                    result.modelDataGetter());
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_TEXTURES_GETTER,
+                    result.texturesGetter());
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_TEXTURE_CACHE_ACQUIRE,
+                    result.cacheAcquire());
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_TEXTURE_LOCATION_GETTER,
+                    result.locationGetter());
+        } catch (IOException | RuntimeException exception) {
+            fail(diagnostics, exception, keys);
+        }
+    }
+
+    static ClientTextureCacheSymbols findClientTextureCacheSymbols(
+            Map<String, ClassNode> classes, YsmMethodSymbol lookup) throws IOException {
+        ClassNode manager = requireClass(classes, lookup.owner(), "client model manager");
+        MethodNode lookupMethod = manager.methods.stream()
+                .filter(method -> method.name.equals(lookup.name())
+                        && method.desc.equals(lookup.descriptor()))
+                .findFirst().orElseThrow(() -> new IOException("Missing client model lookup"));
+
+        List<String> modelTypes = new ArrayList<>();
+        for (AbstractInsnNode instruction : lookupMethod.instructions) {
+            if (instruction instanceof TypeInsnNode type
+                    && type.getOpcode() == Opcodes.CHECKCAST
+                    && classes.containsKey(type.desc) && !modelTypes.contains(type.desc)) {
+                modelTypes.add(type.desc);
+            }
+        }
+        if (modelTypes.size() != 1) {
+            throw new IOException("Client model lookup must cast exactly one model type");
+        }
+        String modelType = modelTypes.get(0);
+
+        List<ClientTextureCacheSymbols> candidates = new ArrayList<>();
+        for (MethodNode method : manager.methods) {
+            List<AbstractInsnNode> code = realInstructions(method);
+            for (int index = 0; index < code.size(); index++) {
+                if (!(code.get(index) instanceof MethodInsnNode modelDataCall)
+                        || !modelDataCall.owner.equals(modelType)
+                        || Type.getArgumentTypes(modelDataCall.desc).length != 0
+                        || Type.getReturnType(modelDataCall.desc).getSort() != Type.OBJECT) {
+                    continue;
+                }
+                String dataType = Type.getReturnType(modelDataCall.desc).getInternalName();
+                MethodInsnNode texturesCall = nextInvocation(code, index + 1, 4,
+                        call -> call.owner.equals(dataType)
+                                && Type.getArgumentTypes(call.desc).length == 0
+                                && Type.getReturnType(call.desc).getSort() == Type.OBJECT);
+                if (texturesCall == null) {
+                    continue;
+                }
+                int texturesIndex = code.indexOf(texturesCall);
+                String mapType = Type.getReturnType(texturesCall.desc).getInternalName();
+                MethodInsnNode indexedTexture = nextInvocation(code, texturesIndex + 1, 5,
+                        call -> call.owner.equals(mapType)
+                                && call.desc.equals("(I)Ljava/lang/Object;"));
+                if (indexedTexture == null) {
+                    continue;
+                }
+                int indexedTextureIndex = code.indexOf(indexedTexture);
+                int textureCastIndex = nextMinecraftTypeInstruction(
+                        code, indexedTextureIndex + 1, 3);
+                if (textureCastIndex < 0) {
+                    continue;
+                }
+                String textureType = ((TypeInsnNode) code.get(textureCastIndex)).desc;
+                MethodInsnNode acquire = nextInvocation(code, textureCastIndex + 1, 6,
+                        call -> call.getOpcode() == Opcodes.INVOKESTATIC
+                                && cacheAcquireDescriptor(call.desc, textureType));
+                if (acquire == null) {
+                    continue;
+                }
+                String leaseType = Type.getReturnType(acquire.desc).getInternalName();
+                ClassNode lease = classes.get(leaseType);
+                if (lease == null) {
+                    continue;
+                }
+                List<MethodNode> locationGetters = lease.methods.stream()
+                        .filter(candidate -> !isStatic(candidate) && isPublic(candidate)
+                                && candidate.desc.equals("()Ljava/util/Optional;"))
+                        .toList();
+                if (locationGetters.size() != 1) {
+                    continue;
+                }
+                MethodNode locationGetter = locationGetters.get(0);
+                ClientTextureCacheSymbols candidate = new ClientTextureCacheSymbols(
+                        new YsmCompatibilityMap.MethodSymbol(modelDataCall.owner,
+                                modelDataCall.name, modelDataCall.desc),
+                        new YsmCompatibilityMap.MethodSymbol(texturesCall.owner,
+                                texturesCall.name, texturesCall.desc),
+                        new YsmCompatibilityMap.MethodSymbol(acquire.owner,
+                                acquire.name, acquire.desc),
+                        new YsmCompatibilityMap.MethodSymbol(lease.name,
+                                locationGetter.name, locationGetter.desc));
+                if (!candidates.contains(candidate)) {
+                    candidates.add(candidate);
+                }
+            }
+        }
+        if (candidates.size() != 1) {
+            throw new IOException("Expected one client texture cache chain, found "
+                    + candidates.size());
+        }
+        return candidates.get(0);
+    }
+
+    private static boolean cacheAcquireDescriptor(String descriptor, String textureType) {
+        Type[] arguments = Type.getArgumentTypes(descriptor);
+        Type result = Type.getReturnType(descriptor);
+        return arguments.length == 2
+                && arguments[0].getSort() == Type.OBJECT
+                && arguments[0].getInternalName().equals(textureType)
+                && arguments[1].equals(Type.BOOLEAN_TYPE)
+                && result.getSort() == Type.OBJECT;
+    }
+
+    private static List<AbstractInsnNode> realInstructions(MethodNode method) {
+        List<AbstractInsnNode> result = new ArrayList<>();
+        for (AbstractInsnNode instruction : method.instructions) {
+            if (instruction.getOpcode() >= 0) {
+                result.add(instruction);
+            }
+        }
+        return result;
+    }
+
+    private static MethodInsnNode nextInvocation(List<AbstractInsnNode> code, int start,
+            int maximumDistance, Predicate<MethodInsnNode> predicate) {
+        int end = Math.min(code.size(), start + maximumDistance);
+        for (int index = start; index < end; index++) {
+            if (code.get(index) instanceof MethodInsnNode call && predicate.test(call)) {
+                return call;
+            }
+        }
+        return null;
+    }
+
+    private static int nextMinecraftTypeInstruction(List<AbstractInsnNode> code, int start,
+            int maximumDistance) {
+        int end = Math.min(code.size(), start + maximumDistance);
+        for (int index = start; index < end; index++) {
+            if (code.get(index) instanceof TypeInsnNode type
+                    && type.getOpcode() == Opcodes.CHECKCAST
+                    && type.desc.startsWith("net/minecraft/")) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private static void recoverServerManager(Map<String, ClassNode> classes,
@@ -1701,6 +1877,12 @@ public final class JarStructureAnalyzer {
 
     private record ServerSyncResultSymbols(YsmCompatibilityMap.MethodSymbol successGetter,
                                            YsmCompatibilityMap.MethodSymbol errorGetter) {
+    }
+
+    record ClientTextureCacheSymbols(YsmCompatibilityMap.MethodSymbol modelDataGetter,
+                                     YsmCompatibilityMap.MethodSymbol texturesGetter,
+                                     YsmCompatibilityMap.MethodSymbol cacheAcquire,
+                                     YsmCompatibilityMap.MethodSymbol locationGetter) {
     }
 
     record CompleteFeedbackSymbols(YsmCompatibilityMap.FieldSymbol payloadField,
