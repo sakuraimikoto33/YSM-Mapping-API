@@ -36,7 +36,7 @@ class AnalysisProfileTest {
         assertEquals(left.registryDefinitionSha256(), right.registryDefinitionSha256());
         assertEquals("example/Living", left.loader("alpha").livingEntity());
         assertEquals("TEST", left.packets().get(1).name());
-        assertEquals(63, left.definitions().values().stream()
+        assertEquals(67, left.definitions().values().stream()
                 .filter(value -> YsmSymbols.usesServerlessAnalyzer(value.id()))
                 .count());
         assertEquals(9, left.definitions().values().stream()
