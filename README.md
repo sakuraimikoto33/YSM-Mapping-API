@@ -68,6 +68,8 @@ Mixinでsymbolを使用する場合は、Mixin configへpluginとruntime refmap 
 
 `YsmMappingApi.resolve`の結果をReflectionやMethodHandleなどから使うだけのcurated keyには`sourceAlias`は不要です。上の`ysm.client.model_manager.start_sync.method`のように`sourceAlias`を省略し、`mixinRequirements`にも含めません。
 
+公式YSMのクライアントモデルから共有テクスチャを取得するconsumer向けに、モデルデータ取得、テクスチャ一覧取得、動的テクスチャlease取得、ResourceLocation取得のcurated method keyも`YsmSymbols`から提供します。これらもruntime名をconsumerへ保持せず、ReflectionまたはMethodHandleから利用します。
+
 ```json
 {
   "package": "net.example.mixin",

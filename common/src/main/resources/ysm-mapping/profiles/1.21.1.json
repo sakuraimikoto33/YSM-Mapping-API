@@ -270,6 +270,16 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.client.model_container.data_getter.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.model_data.textures_getter.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.client.model_manager.pack_map_getter.method",
       "kind": "METHOD",
       "definitionRevision": 1
@@ -291,6 +301,16 @@
     },
     {
       "id": "ysm.client.model_manager.start_sync.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.texture_cache.acquire.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.texture_cache.location_getter.method",
       "kind": "METHOD",
       "definitionRevision": 1
     },

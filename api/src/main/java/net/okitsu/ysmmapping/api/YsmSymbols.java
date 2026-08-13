@@ -26,6 +26,14 @@ public final class YsmSymbols {
             methodKey("ysm.client.model_manager.model_map_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_LOOKUP =
             methodKey("ysm.client.model_manager.model_lookup.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_DATA_GETTER =
+            methodKey("ysm.client.model_container.data_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_TEXTURES_GETTER =
+            methodKey("ysm.client.model_data.textures_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_TEXTURE_CACHE_ACQUIRE =
+            methodKey("ysm.client.texture_cache.acquire.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_TEXTURE_LOCATION_GETTER =
+            methodKey("ysm.client.texture_cache.location_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_CATALOG_DELTA_CALLBACK =
             methodKey("ysm.client.model_manager.catalog_delta_callback.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_PACK_MAP_GETTER =

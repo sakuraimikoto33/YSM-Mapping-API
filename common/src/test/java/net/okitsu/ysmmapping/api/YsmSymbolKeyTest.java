@@ -13,9 +13,9 @@ class YsmSymbolKeyTest {
     @Test
     void exposesOnlyTheApprovedSemanticRegistry() {
         var symbols = YsmSymbols.all();
-        assertEquals(95, symbols.size());
+        assertEquals(99, symbols.size());
         assertEquals(17, symbols.stream().filter(key -> key.kind() == SymbolKind.CLASS).count());
-        assertEquals(67, symbols.stream().filter(key -> key.kind() == SymbolKind.METHOD).count());
+        assertEquals(71, symbols.stream().filter(key -> key.kind() == SymbolKind.METHOD).count());
         assertEquals(11, symbols.stream().filter(key -> key.kind() == SymbolKind.FIELD).count());
         assertTrue(symbols.stream().allMatch(key -> key.id().startsWith("ysm.")
                 && key.id().endsWith("." + key.kind().name().toLowerCase())));
