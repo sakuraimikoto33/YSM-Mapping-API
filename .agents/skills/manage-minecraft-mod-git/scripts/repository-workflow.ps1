@@ -24,6 +24,7 @@ param(
     [ValidateSet("None", "ForceWithLease", "Force")]
     [string]$ForceMode = "None",
     [string]$ForceAuthorization = "",
+    [string[]]$ValidationRepositoryRoot = @(),
     [switch]$AllowDirty,
     [switch]$SkipBuild
 )
@@ -76,17 +77,23 @@ function Assert-RelativePolicyPath {
 function Load-RepositoryPolicy {
     $corePath = Join-Path $PSScriptRoot "repository-policy.psd1"
     $profilePath = Join-Path $script:RepositoryRoot ".agents/repository-profile.psd1"
+    $ownershipPath = Join-Path $script:RepositoryRoot ".agents/branch-ownership.psd1"
     if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) { throw "Repository profile missing: $profilePath" }
+    if (-not (Test-Path -LiteralPath $ownershipPath -PathType Leaf)) { throw "Branch ownership policy missing: $ownershipPath" }
     $core = Import-PowerShellDataFile -LiteralPath $corePath
     $profile = Import-PowerShellDataFile -LiteralPath $profilePath
+    $ownership = Import-PowerShellDataFile -LiteralPath $ownershipPath
     $coreKeys = @("MainBranch", "MinecraftBranchPattern", "ActiveMinecraftBranchesFile", "ContractVersionPatterns",
-        "DependencyVersionPatterns", "MainValidation", "MinecraftValidation")
-    $profileKeys = @("Name", "SharedPaths", "VersionPaths", "MixedPaths",
-        "ForbiddenTrackedPatterns", "PropagationSiblingRepositories", "RepositoryVerifier")
-    $profileOptionalKeys = @("MainOnlyPaths")
+        "DependencyVersionPatterns")
+    $profileKeys = @("Name", "ForbiddenTrackedPatterns", "ValidationRepositories", "RepositoryVerifier",
+        "RepositoryVerifierProfiles", "MainValidation", "MinecraftValidation")
+    $ownershipKeys = @("MainOnlyPaths", "SharedPaths", "MinecraftPaths", "MixedPaths")
     Assert-PolicyKeys -Data $core -Required $coreKeys -Label "Core repository policy"
-    Assert-PolicyKeys -Data $profile -Required $profileKeys -Optional $profileOptionalKeys -Label "Repository profile"
-    if ([string]::IsNullOrWhiteSpace([string]$profile.Name)) { throw "Repository profile Name must not be empty." }
+    Assert-PolicyKeys -Data $profile -Required $profileKeys -Label "Repository profile"
+    Assert-PolicyKeys -Data $ownership -Required $ownershipKeys -Label "Branch ownership policy"
+    if ([string]$profile.Name -notmatch '^[0-9A-Za-z][0-9A-Za-z._-]*$') {
+        throw "Repository profile Name must be a safe logical identifier."
+    }
     if ([string]$core.MainBranch -ne "main") { throw "Core repository policy must use main as MainBranch." }
     try { [void][regex]::new([string]$core.MinecraftBranchPattern) }
     catch { throw "Invalid MinecraftBranchPattern: $($_.Exception.Message)" }
@@ -100,18 +107,30 @@ function Load-RepositoryPolicy {
         try { [void][regex]::new([string]$pattern) }
         catch { throw "Invalid ForbiddenTrackedPatterns regex '$pattern': $($_.Exception.Message)" }
     }
-    $siblings = @($profile.PropagationSiblingRepositories | ForEach-Object { ([string]$_).Trim() })
-    if (@($siblings | Where-Object { $_ -notmatch '^[0-9A-Za-z][0-9A-Za-z._-]*$' }).Count) {
-        throw "PropagationSiblingRepositories contains an unsafe repository directory name."
+    $dependencies = @($profile.ValidationRepositories | ForEach-Object { ([string]$_).Trim() })
+    if (@($dependencies | Where-Object { $_ -notmatch '^[0-9A-Za-z][0-9A-Za-z._-]*$' }).Count) {
+        throw "ValidationRepositories contains an unsafe logical repository name."
     }
-    if (@($siblings | Sort-Object -Unique).Count -ne $siblings.Count) {
-        throw "PropagationSiblingRepositories contains duplicate entries."
+    if (@($dependencies | Sort-Object -Unique).Count -ne $dependencies.Count) {
+        throw "ValidationRepositories contains duplicate entries."
+    }
+    $verifierProfiles = @($profile.RepositoryVerifierProfiles | ForEach-Object { ([string]$_).Trim() })
+    if (@($verifierProfiles | Where-Object { $_ -notin @("Main", "Minecraft") }).Count -or
+        @($verifierProfiles | Sort-Object -Unique).Count -ne $verifierProfiles.Count) {
+        throw "RepositoryVerifierProfiles must contain unique Main or Minecraft values."
+    }
+    foreach ($validationKey in @("MainValidation", "MinecraftValidation")) {
+        foreach ($task in @($profile[$validationKey])) {
+            if ([string]$task -notmatch '^[0-9A-Za-z][0-9A-Za-z:._-]*$') {
+                throw "$validationKey contains an unsafe Gradle task name."
+            }
+        }
     }
     $seen = @{}
-    foreach ($category in @("MainOnlyPaths", "SharedPaths", "VersionPaths", "MixedPaths")) {
-        $values = if ($profile.Contains($category)) { @($profile[$category]) } else { @() }
+    foreach ($category in $ownershipKeys) {
+        $values = @($ownership[$category])
         if ($category -ne "MainOnlyPaths" -and -not $values.Count) {
-            throw "Repository profile $category must not be empty."
+            throw "Branch ownership policy $category must not be empty."
         }
         foreach ($value in $values) {
             $normalized = if ($category -eq "MainOnlyPaths") {
@@ -137,9 +156,7 @@ function Load-RepositoryPolicy {
     $merged = [ordered]@{}
     foreach ($key in $coreKeys) { $merged[$key] = $core[$key] }
     foreach ($key in $profileKeys) { $merged[$key] = $profile[$key] }
-    foreach ($key in $profileOptionalKeys) {
-        $merged[$key] = if ($profile.Contains($key)) { $profile[$key] } else { @() }
-    }
+    foreach ($key in $ownershipKeys) { $merged[$key] = $ownership[$key] }
     $merged
 }
 
@@ -166,6 +183,32 @@ function Current-Branch {
     $value = Invoke-Git -Root $Root -Arguments @("symbolic-ref", "--quiet", "--short", "HEAD") -AllowFailure
     if ($value.ExitCode -eq 0) { return $value.Text.Trim() }
     return $null
+}
+function Resolve-ValidationRepositoryMap {
+    $required = @($script:Policy.ValidationRepositories)
+    $resolved = @{}
+    foreach ($candidate in @($ValidationRepositoryRoot)) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
+        $root = (Resolve-Path -LiteralPath $candidate).Path
+        $reported = (Invoke-Git -Root $root -Arguments @("rev-parse", "--show-toplevel")).Text.Trim()
+        if ([IO.Path]::GetFullPath($reported) -ne [IO.Path]::GetFullPath($root)) {
+            throw "Validation repository root mismatch: expected '$root', found '$reported'."
+        }
+        $profilePath = Join-Path $root ".agents/repository-profile.psd1"
+        if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) {
+            throw "Validation repository profile missing: $profilePath"
+        }
+        $profile = Import-PowerShellDataFile -LiteralPath $profilePath
+        $name = ([string]$profile.Name).Trim()
+        if ($name -notmatch '^[0-9A-Za-z][0-9A-Za-z._-]*$') { throw "Unsafe validation repository Name '$name'." }
+        if ($resolved.ContainsKey($name)) { throw "Duplicate validation repository Name '$name'." }
+        $resolved[$name] = $root
+    }
+    $missing = @($required | Where-Object { -not $resolved.ContainsKey([string]$_) })
+    if ($missing.Count -and -not $SkipBuild) {
+        throw "Missing explicit -ValidationRepositoryRoot values for: $($missing -join ', ')."
+    }
+    $resolved
 }
 function Branch-Exists {
     param([Parameter(Mandatory)][string]$Name)
@@ -334,7 +377,7 @@ function Policy-Category {
         if ($Candidate -eq $prefix -or $Candidate.StartsWith("$prefix/", [StringComparison]::Ordinal) -or
             ($prefix.EndsWith("-") -and $Candidate.StartsWith($prefix, [StringComparison]::Ordinal))) { return "Shared" }
     }
-    foreach ($prefix in @($script:Policy.VersionPaths)) {
+    foreach ($prefix in @($script:Policy.MinecraftPaths)) {
         if ($Candidate -eq $prefix -or $Candidate.StartsWith("$prefix/", [StringComparison]::Ordinal) -or
             ($prefix.EndsWith("-") -and $Candidate.StartsWith($prefix, [StringComparison]::Ordinal))) { return "Minecraft" }
     }
@@ -484,23 +527,34 @@ function New-Log {
         [guid]::NewGuid().ToString("N"))
 }
 function Run-DomainVerifier {
-    param([string]$Root)
+    param([string]$Root, [string]$Profile)
+    if ($Profile -notin @($script:Policy.RepositoryVerifierProfiles)) { return $null }
     $path = Join-Path $Root ([string]$script:Policy.RepositoryVerifier)
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Repository verifier missing: $path" }
     $log = New-Log -Label "domain-policy"
-    & $path -RepoRoot $Root -AllowContractVersionChange:$ContractVersionAuthorized *> $log
-    $succeeded = $?
+    $arguments = @{
+        RepoRoot = $Root
+        AllowContractVersionChange = [bool]$ContractVersionAuthorized
+    }
+    $command = Get-Command -Name $path -CommandType ExternalScript
+    if ($command.Parameters.ContainsKey("SkipBuild")) { $arguments.SkipBuild = [bool]$SkipBuild }
+    Push-Location -LiteralPath $Root
+    try {
+        & $path @arguments *> $log
+        $succeeded = $?
+    } finally { Pop-Location }
     if (-not $succeeded) { throw "Domain policy failed. log=$log" }
     return $log
 }
 function Run-Build {
     param([string]$Root, [string]$Profile)
     if ($SkipBuild) { return $null }
-    $wrapper = Join-Path $Root "gradlew.bat"
-    if (-not (Test-Path -LiteralPath $wrapper -PathType Leaf)) { throw "Gradle wrapper missing: $wrapper" }
     $tasks = if ($Profile -eq "Main") { @($script:Policy.MainValidation) }
         elseif ($Profile -eq "Minecraft") { @($script:Policy.MinecraftValidation) }
         else { throw "Unknown validation profile: $Profile" }
+    if (-not @($tasks).Count) { return $null }
+    $wrapper = Join-Path $Root "gradlew.bat"
+    if (-not (Test-Path -LiteralPath $wrapper -PathType Leaf)) { throw "Gradle wrapper missing: $wrapper" }
     $log = New-Log -Label "$Profile-build"
     Push-Location -LiteralPath $Root
     try {
@@ -528,7 +582,7 @@ function Run-Validation {
         elseif ($branch -and $branch -match [string]$script:Policy.MinecraftBranchPattern) { "Minecraft" }
         else { throw "Unsupported branch '$branch'." }
     $logs = [Collections.Generic.List[string]]::new()
-    if (-not $SkipRepositoryPolicy) { $domain = Run-DomainVerifier -Root $Root; if ($domain) { $logs.Add($domain) } }
+    if (-not $SkipRepositoryPolicy) { $domain = Run-DomainVerifier -Root $Root -Profile $profile; if ($domain) { $logs.Add($domain) } }
     $build = Run-Build -Root $Root -Profile $profile; if ($build) { $logs.Add($build) }
     [ordered]@{ profile = $profile; policy = $policy; logs = @($logs) }
 }
@@ -1082,6 +1136,7 @@ function Propagate-Main {
             $required.Add($branch)
         }
     }
+    $validationRepositories = Resolve-ValidationRepositoryMap
     $preflight = [Collections.Generic.List[object]]::new()
     foreach ($branch in @($required)) {
         $temp = Join-Path ([IO.Path]::GetTempPath()) ("main-propagate-preflight-" + [guid]::NewGuid().ToString("N"))
@@ -1096,19 +1151,15 @@ function Propagate-Main {
             [void](Invoke-Git -Root $clone -Arguments @("switch", "--quiet", "--detach", "origin/$branch"))
             $siblingClones = [Collections.Generic.List[string]]::new()
             if (-not $SkipBuild) {
-                $workspace = Split-Path -Parent $script:RepositoryRoot
-                foreach ($sibling in @($script:Policy.PropagationSiblingRepositories)) {
-                    $source = Join-Path $workspace ([string]$sibling)
-                    if (-not (Test-Path -LiteralPath $source -PathType Container)) {
-                        throw "Propagation sibling repository is missing: $source"
-                    }
+                foreach ($sibling in @($script:Policy.ValidationRepositories)) {
+                    $source = [string]$validationRepositories[[string]$sibling]
                     $destination = Join-Path $temp ([string]$sibling)
                     [void](Invoke-Git -Root $temp -Arguments @("clone", "--quiet", "--no-hardlinks", "--no-checkout",
                         $source, $destination))
                     $siblingBranch = Invoke-Git -Root $destination -Arguments @("rev-parse", "--verify",
                         "origin/$branch") -AllowFailure
                     if ($siblingBranch.ExitCode -ne 0) {
-                        throw "Propagation sibling lacks ${branch}: $sibling"
+                        throw "Validation repository lacks ${branch}: $sibling"
                     }
                     [void](Invoke-Git -Root $destination -Arguments @("switch", "--quiet", "--detach", "origin/$branch"))
                     $siblingClones.Add($destination)

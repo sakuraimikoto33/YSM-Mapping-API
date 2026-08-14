@@ -10,6 +10,4 @@
         "^\+(?!\+).*distributionUrl\s*=.*gradle-[0-9]"
         "^\+(?!\+).*\b(?:fabric|forge|neoforge|loom|loader|gradle|junit|gson|netty)[A-Za-z0-9_.-]*\s*=\s*[`"']?[0-9]"
     )
-    MainValidation = @("clean", "build")
-    MinecraftValidation = @("clean", "build", "verifyDistributions")
 }
