@@ -1,7 +1,0 @@
-interface:
-  display_name: "Manage YSM Mapping API Git"
-  short_description: "Manage safe branches, commits, merges, and pushes"
-  default_prompt: "Use $manage-ysm-mapping-api-git to inspect and safely manage this YSM-Mapping-API repository task."
-
-policy:
-  allow_implicit_invocation: true
