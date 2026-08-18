@@ -97,11 +97,19 @@ public final class SymbolMappings {
         field(values, YsmSymbols.PLAYER_STATE_FLAGS_FIELD, build.playerStateFlagsField());
         field(values, YsmSymbols.PLAYER_STATE_DECODED_ROAMING_FIELD,
                 build.playerStateDecodedRoamingField());
+        values.put(YsmSymbols.PLAYER_STATE_CAPABILITY_CLASS,
+                new YsmClassSymbol(build.playerStateCapabilityClass()));
+        method(values, YsmSymbols.PLAYER_STATE_ROAMING_PROVIDER_GETTER,
+                build.playerStateRoamingProviderGetter());
+        method(values, YsmSymbols.PLAYER_STATE_ROAMING_VALUE_GETTER,
+                build.playerStateRoamingValueGetter());
+        method(values, YsmSymbols.PLAYER_STATE_ROAMING_NAME_HASHER,
+                build.playerStateRoamingNameHasher());
         method(values, YsmSymbols.PLAYER_STATE_FULL_ROAMING_INITIALIZER,
                 build.playerStateFullRoamingInitializer());
 
-        if (values.size() != 63) {
-            throw new IOException("YSM mapping does not cover the 63-symbol legacy surface");
+        if (values.size() != 67) {
+            throw new IOException("YSM mapping does not cover the 67-symbol legacy surface");
         }
         return Map.copyOf(values);
     }
