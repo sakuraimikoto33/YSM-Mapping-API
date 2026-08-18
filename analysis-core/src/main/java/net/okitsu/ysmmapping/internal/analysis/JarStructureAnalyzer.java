@@ -104,7 +104,7 @@ public final class JarStructureAnalyzer {
                 registration.symbols);
         AnimationSymbols animation = findAnimationSymbols(classesByName, registration.symbols);
         PlayerStateSymbols playerState = findPlayerStateSymbols(classesByName,
-                registration.symbols);
+                registration.symbols, artifact.loader().equals("forge"));
         MethodReference clientStart = findUniqueInvokedMethod(
                 classesByName.get(registration.symbols.get(1)),
                 reference -> hasArguments(reference.desc, "net/minecraft/", "java/nio/ByteBuffer")
@@ -200,7 +200,9 @@ public final class JarStructureAnalyzer {
                 playerState.roamingSetter(), playerState.codecWriter(),
                 playerState.codecDecoder(), playerState.clientHandler(),
                 playerState.flagsField(), playerState.decodedRoamingField(),
-                    playerState.fullRoamingInitializer());
+                playerState.capabilityClass(), playerState.roamingProviderGetter(),
+                playerState.roamingValueGetter(), playerState.roamingNameHasher(),
+                playerState.fullRoamingInitializer());
         } catch (IOException exception) {
             throw new StructuralAnalysisException(exception.getMessage(), exception);
         }
@@ -266,7 +268,8 @@ public final class JarStructureAnalyzer {
                             && Type.getReturnType(method.desc).equals(Type.BOOLEAN_TYPE)));
             recoverFeedback(byName, registration.symbols, values, diagnostics);
             recoverAnimation(byName, registration.symbols, values, diagnostics);
-            recoverPlayerState(byName, registration.symbols, values, diagnostics);
+            recoverPlayerState(byName, registration.symbols, values, diagnostics,
+                    artifact.loader().equals("forge"));
             recoverClientManager(byName, registration.symbols, values, diagnostics);
             recoverClientTextureCache(byName, values, diagnostics);
             recoverServerManager(byName, registration.symbols, values, diagnostics);
@@ -376,9 +379,10 @@ public final class JarStructureAnalyzer {
 
     private void recoverPlayerState(Map<String, ClassNode> classes,
             Map<Integer, String> packets, Map<YsmSymbolKey<?>, YsmResolvedSymbol> values,
-            Map<YsmSymbolKey<?>, String> diagnostics) {
+            Map<YsmSymbolKey<?>, String> diagnostics, boolean requirePlayerConstructor) {
         try {
-            PlayerStateSymbols result = findPlayerStateSymbols(classes, packets);
+            PlayerStateSymbols result = findPlayerStateSymbols(
+                    classes, packets, requirePlayerConstructor);
             putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ANIMATION_SETTER,
                     result.animationSetter());
             putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ROAMING_SETTER,
@@ -393,6 +397,14 @@ public final class JarStructureAnalyzer {
                     result.flagsField());
             putField(values, diagnostics, YsmSymbols.PLAYER_STATE_DECODED_ROAMING_FIELD,
                     result.decodedRoamingField());
+            values.put(YsmSymbols.PLAYER_STATE_CAPABILITY_CLASS,
+                    new YsmClassSymbol(result.capabilityClass()));
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ROAMING_PROVIDER_GETTER,
+                    result.roamingProviderGetter());
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ROAMING_VALUE_GETTER,
+                    result.roamingValueGetter());
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ROAMING_NAME_HASHER,
+                    result.roamingNameHasher());
             putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_FULL_ROAMING_INITIALIZER,
                     result.fullRoamingInitializer());
         } catch (IOException exception) {
@@ -402,6 +414,10 @@ public final class JarStructureAnalyzer {
                     YsmSymbols.PLAYER_STATE_CODEC_DECODER,
                     YsmSymbols.PLAYER_STATE_CLIENT_HANDLER, YsmSymbols.PLAYER_STATE_FLAGS_FIELD,
                     YsmSymbols.PLAYER_STATE_DECODED_ROAMING_FIELD,
+                    YsmSymbols.PLAYER_STATE_CAPABILITY_CLASS,
+                    YsmSymbols.PLAYER_STATE_ROAMING_PROVIDER_GETTER,
+                    YsmSymbols.PLAYER_STATE_ROAMING_VALUE_GETTER,
+                    YsmSymbols.PLAYER_STATE_ROAMING_NAME_HASHER,
                     YsmSymbols.PLAYER_STATE_FULL_ROAMING_INITIALIZER);
         }
     }
@@ -920,7 +936,14 @@ public final class JarStructureAnalyzer {
     }
 
     PlayerStateSymbols findPlayerStateSymbols(Map<String, ClassNode> classes,
-                                                      Map<Integer, String> packets)
+                                               Map<Integer, String> packets)
+            throws IOException {
+        return findPlayerStateSymbols(classes, packets, true);
+    }
+
+    private PlayerStateSymbols findPlayerStateSymbols(Map<String, ClassNode> classes,
+                                                       Map<Integer, String> packets,
+                                                       boolean requirePlayerConstructor)
             throws IOException {
         ClassNode packet = requireClass(classes, packets.get(21), "packet 21");
         String self = "L" + packet.name + ";";
@@ -954,14 +977,16 @@ public final class JarStructureAnalyzer {
                         && field.desc.equals("Lit/unimi/dsi/fastutil/ints/Int2FloatMap;"),
                 "packet 21 decoded roaming field");
 
+        MethodInsnNode roamingNameHasher = uniqueInvocation(invocationNodes(decoder),
+                invocation -> invocation.getOpcode() == Opcodes.INVOKESTATIC
+                        && invocation.desc.equals("(Ljava/lang/String;)I"),
+                "packet 21 roaming name hasher");
         if (!accessesField(writer, Opcodes.GETFIELD, packet.name, flags)
                 || !accessesField(decoder, Opcodes.PUTFIELD, packet.name, flags)
                 || !accessesField(decoder, Opcodes.PUTFIELD, packet.name, decodedRoaming)
                 || !containsInteger(writer, 4096) || !containsInteger(decoder, 4096)
                 || !containsType(decoder,
-                        "it/unimi/dsi/fastutil/ints/Int2FloatOpenHashMap")
-                || !hasInvocation(decoder, invocation -> invocation.desc.equals(
-                        "(Ljava/lang/String;)I"))) {
+                        "it/unimi/dsi/fastutil/ints/Int2FloatOpenHashMap")) {
             throw new IOException("Packet 21 full-state codec contract is unsupported");
         }
 
@@ -970,6 +995,15 @@ public final class JarStructureAnalyzer {
                 invocation -> invocation.desc.equals(
                         "(ILit/unimi/dsi/fastutil/ints/Int2FloatOpenHashMap;)V"),
                 "packet 21 full roaming initializer");
+        ClassNode capability = requireClass(classes, fullInitializer.owner,
+                "player state capability");
+        if (requirePlayerConstructor && capability.methods.stream().noneMatch(method ->
+                method.name.equals("<init>") && method.desc.equals(
+                        "(Lnet/minecraft/world/entity/player/Player;)V"))) {
+            throw new IOException("Player state capability has no Player constructor");
+        }
+        RoamingProviderSymbols provider = findRoamingProviderSymbols(
+                classes, capability, fullInitializer);
         MethodNode initializerCaller = packet.methods.stream()
                 .filter(method -> hasInvocation(method, invocation -> invocation.owner.equals(
                         fullInitializer.owner) && invocation.name.equals(fullInitializer.name)
@@ -991,7 +1025,56 @@ public final class JarStructureAnalyzer {
         return new PlayerStateSymbols(animation, roaming, methodSymbol(packet, writer),
                 methodSymbol(packet, decoder), methodSymbol(packet, clientHandler),
                 fieldSymbol(packet, flags), fieldSymbol(packet, decodedRoaming),
+                capability.name, provider.providerGetter(), provider.valueGetter(),
+                methodSymbol(roamingNameHasher),
                 methodSymbol(fullInitializer));
+    }
+
+    private static RoamingProviderSymbols findRoamingProviderSymbols(
+            Map<String, ClassNode> classes, ClassNode capability,
+            MethodInsnNode fullInitializer) throws IOException {
+        MethodNode initializer = declaredMethod(capability, fullInitializer.name,
+                fullInitializer.desc);
+        if (initializer == null) {
+            throw new IOException("Player state full roaming initializer is not declared");
+        }
+        List<FieldReference> providerWrites = new ArrayList<>();
+        for (AbstractInsnNode instruction : initializer.instructions) {
+            if (instruction instanceof FieldInsnNode field
+                    && field.getOpcode() == Opcodes.PUTFIELD
+                    && field.owner.equals(capability.name)
+                    && Type.getType(field.desc).getSort() == Type.OBJECT
+                    && classes.containsKey(Type.getType(field.desc).getInternalName())) {
+                providerWrites.add(new FieldReference(field.name, field.desc));
+            }
+        }
+        List<FieldReference> uniqueWrites = providerWrites.stream().distinct().toList();
+        if (uniqueWrites.size() != 1) {
+            throw new IOException("Expected one current roaming provider field, found "
+                    + uniqueWrites.size());
+        }
+        FieldReference providerField = uniqueWrites.get(0);
+        FieldNode declaredProvider = capability.fields.stream()
+                .filter(field -> field.name.equals(providerField.name())
+                        && field.desc.equals(providerField.desc()))
+                .findFirst().orElseThrow(() -> new IOException(
+                        "Current roaming provider field is not declared"));
+        MethodNode providerGetter = uniqueMethod(capability,
+                method -> !isStatic(method) && isPublic(method)
+                        && Type.getArgumentTypes(method.desc).length == 0
+                        && Type.getReturnType(method.desc).getDescriptor()
+                        .equals(providerField.desc())
+                        && accessesField(method, Opcodes.GETFIELD, capability.name,
+                        declaredProvider), "current roaming provider getter");
+        ClassNode provider = requireClass(classes,
+                Type.getReturnType(providerGetter.desc).getInternalName(),
+                "roaming variable provider");
+        MethodNode valueGetter = uniqueMethod(provider,
+                method -> !isStatic(method) && isPublic(method)
+                        && method.desc.equals("(I)Ljava/lang/Object;"),
+                "roaming variable value getter");
+        return new RoamingProviderSymbols(methodSymbol(capability, providerGetter),
+                methodSymbol(provider, valueGetter));
     }
 
     private static MethodNode uniqueMethod(ClassNode owner, Predicate<MethodNode> filter,
@@ -1910,6 +1993,15 @@ public final class JarStructureAnalyzer {
                               YsmCompatibilityMap.MethodSymbol clientHandler,
                               YsmCompatibilityMap.FieldSymbol flagsField,
                               YsmCompatibilityMap.FieldSymbol decodedRoamingField,
+                              String capabilityClass,
+                              YsmCompatibilityMap.MethodSymbol roamingProviderGetter,
+                              YsmCompatibilityMap.MethodSymbol roamingValueGetter,
+                              YsmCompatibilityMap.MethodSymbol roamingNameHasher,
                               YsmCompatibilityMap.MethodSymbol fullRoamingInitializer) {
+    }
+
+    private record RoamingProviderSymbols(
+            YsmCompatibilityMap.MethodSymbol providerGetter,
+            YsmCompatibilityMap.MethodSymbol valueGetter) {
     }
 }
