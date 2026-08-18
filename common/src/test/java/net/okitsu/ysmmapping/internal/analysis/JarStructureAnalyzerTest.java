@@ -2,6 +2,7 @@ package net.okitsu.ysmmapping.internal.analysis;
 
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
@@ -96,12 +97,52 @@ final class JarStructureAnalyzerTest {
         assertEquals("handle", symbols.clientHandler().name());
         assertEquals("flags", symbols.flagsField().name());
         assertEquals("decodedRoaming", symbols.decodedRoamingField().name());
+        assertEquals("test/Capability", symbols.capabilityClass());
+        assertEquals("provider", symbols.roamingProviderGetter().name());
+        assertEquals("get", symbols.roamingValueGetter().name());
+        assertEquals("hash", symbols.roamingNameHasher().name());
         assertEquals("initialize", symbols.fullRoamingInitializer().name());
     }
 
     @Test
     void rejectsPlayerStateDecoderWithoutHashedFullMapConversion() {
         PlayerStateFixture fixture = playerStateFixture(false);
+
+        assertThrows(IOException.class, () -> analyzer().findPlayerStateSymbols(
+                fixture.classes(), Map.of(21, fixture.packet().name)));
+    }
+
+    @Test
+    void rejectsPlayerStateWithoutAStaticRoamingNameHasher() {
+        PlayerStateFixture fixture = playerStateFixture(true);
+        MethodNode decoder = fixture.packet().methods.stream()
+                .filter(method -> method.name.equals("decode")).findFirst().orElseThrow();
+        AbstractInsnNode hasher = decoder.instructions.getFirst();
+        while (!(hasher instanceof MethodInsnNode method)
+                || !method.desc.equals("(Ljava/lang/String;)I")) {
+            hasher = hasher.getNext();
+        }
+        ((MethodInsnNode) hasher).setOpcode(Opcodes.INVOKEVIRTUAL);
+
+        assertThrows(IOException.class, () -> analyzer().findPlayerStateSymbols(
+                fixture.classes(), Map.of(21, fixture.packet().name)));
+    }
+
+    @Test
+    void rejectsPlayerStateWithoutACurrentRoamingProviderGetter() {
+        PlayerStateFixture fixture = playerStateFixture(true);
+        ClassNode capability = fixture.classes().get("test/Capability");
+        capability.methods.removeIf(method -> method.name.equals("provider"));
+
+        assertThrows(IOException.class, () -> analyzer().findPlayerStateSymbols(
+                fixture.classes(), Map.of(21, fixture.packet().name)));
+    }
+
+    @Test
+    void rejectsForgePlayerStateWithoutAPlayerConstructor() {
+        PlayerStateFixture fixture = playerStateFixture(true);
+        ClassNode capability = fixture.classes().get("test/Capability");
+        capability.methods.removeIf(method -> method.name.equals("<init>"));
 
         assertThrows(IOException.class, () -> analyzer().findPlayerStateSymbols(
                 fixture.classes(), Map.of(21, fixture.packet().name)));
@@ -187,6 +228,32 @@ final class JarStructureAnalyzerTest {
         packet.fields.add(new FieldNode(Opcodes.ACC_PUBLIC, "flags", "S", null, null));
         packet.fields.add(new FieldNode(Opcodes.ACC_PUBLIC, "decodedRoaming",
                 "Lit/unimi/dsi/fastutil/ints/Int2FloatMap;", null, null));
+
+        ClassNode capability = classNode("test/Capability");
+        capability.fields.add(new FieldNode(Opcodes.ACC_PRIVATE, "current",
+                "Ltest/Provider;", null, null));
+        capability.methods.add(new MethodNode(Opcodes.ACC_PUBLIC, "<init>",
+                "(Lnet/minecraft/world/entity/player/Player;)V", null, null));
+        MethodNode initializer = new MethodNode(Opcodes.ACC_PUBLIC, "initialize",
+                "(ILit/unimi/dsi/fastutil/ints/Int2FloatOpenHashMap;)V", null, null);
+        initializer.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        initializer.instructions.add(new InsnNode(Opcodes.ACONST_NULL));
+        initializer.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD, capability.name,
+                "current", "Ltest/Provider;"));
+        initializer.instructions.add(new InsnNode(Opcodes.RETURN));
+        capability.methods.add(initializer);
+        MethodNode providerGetter = new MethodNode(Opcodes.ACC_PUBLIC, "provider",
+                "()Ltest/Provider;", null, null);
+        providerGetter.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        providerGetter.instructions.add(new FieldInsnNode(Opcodes.GETFIELD, capability.name,
+                "current", "Ltest/Provider;"));
+        providerGetter.instructions.add(new InsnNode(Opcodes.ARETURN));
+        capability.methods.add(providerGetter);
+
+        ClassNode provider = classNode("test/Provider");
+        provider.access = Opcodes.ACC_PUBLIC | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT;
+        provider.methods.add(new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT,
+                "get", "(I)Ljava/lang/Object;", null, null));
 
         String self = "L" + packet.name + ";";
         MethodNode animation = new MethodNode(Opcodes.ACC_PUBLIC, "animation",
@@ -274,7 +341,8 @@ final class JarStructureAnalyzerTest {
         handler.instructions.add(new InsnNode(Opcodes.RETURN));
         packet.methods.add(handler);
 
-        return new PlayerStateFixture(packet, Map.of(packet.name, packet));
+        return new PlayerStateFixture(packet, Map.of(packet.name, packet,
+                capability.name, capability, provider.name, provider));
     }
 
     private record Fixture(ClassNode packet, Map<String, ClassNode> classes) {

@@ -530,6 +530,11 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.player_state.capability.class",
+      "kind": "CLASS",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.player_state.client_handler.method",
       "kind": "METHOD",
       "definitionRevision": 1
@@ -560,7 +565,22 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.player_state.roaming_name_hasher.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.player_state.roaming_provider_getter.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.player_state.roaming_setter.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.player_state.roaming_value_getter.method",
       "kind": "METHOD",
       "definitionRevision": 1
     },
