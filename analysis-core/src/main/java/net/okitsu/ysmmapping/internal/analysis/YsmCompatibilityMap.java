@@ -50,6 +50,10 @@ public record YsmCompatibilityMap(String id, String minecraftVersion, String loa
                                   MethodSymbol playerStateClientHandler,
                                   FieldSymbol playerStateFlagsField,
                                   FieldSymbol playerStateDecodedRoamingField,
+                                  String playerStateCapabilityClass,
+                                  MethodSymbol playerStateRoamingProviderGetter,
+                                  MethodSymbol playerStateRoamingValueGetter,
+                                  MethodSymbol playerStateRoamingNameHasher,
                                   MethodSymbol playerStateFullRoamingInitializer) {
     public record PacketSymbol(int id, String semantic, String direction, String messageClass) {
     }
