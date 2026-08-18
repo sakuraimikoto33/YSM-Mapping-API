@@ -108,6 +108,14 @@ public final class YsmSymbols {
             fieldKey("ysm.player_state.flags.field");
     public static final YsmSymbolKey<YsmFieldSymbol> PLAYER_STATE_DECODED_ROAMING_FIELD =
             fieldKey("ysm.player_state.decoded_roaming.field");
+    public static final YsmSymbolKey<YsmClassSymbol> PLAYER_STATE_CAPABILITY_CLASS =
+            classKey("ysm.player_state.capability.class");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ROAMING_PROVIDER_GETTER =
+            methodKey("ysm.player_state.roaming_provider_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ROAMING_VALUE_GETTER =
+            methodKey("ysm.player_state.roaming_value_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ROAMING_NAME_HASHER =
+            methodKey("ysm.player_state.roaming_name_hasher.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_FULL_ROAMING_INITIALIZER =
             methodKey("ysm.player_state.full_roaming_initializer.method");
 
