@@ -15,12 +15,36 @@ import org.objectweb.asm.tree.VarInsnNode;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 final class JarStructureAnalyzerTest {
+    @Test
+    void discoversTheAnimationRouletteConfigurationExpressionExecutor() throws Exception {
+        List<ClassNode> classes = rouletteFixture("test/Roulette");
+
+        YsmCompatibilityMap.MethodSymbol symbol = analyzer()
+                .findAnimationRouletteConfigurationExpression(classes, "forge");
+
+        assertEquals("test/Roulette", symbol.owner());
+        assertEquals("executeConfig", symbol.name());
+    }
+
+    @Test
+    void rejectsAmbiguousAnimationRouletteConfigurationExpressionExecutors() {
+        List<ClassNode> first = rouletteFixture("test/FirstRoulette");
+        List<ClassNode> second = rouletteFixture("test/SecondRoulette");
+        java.util.ArrayList<ClassNode> classes = new java.util.ArrayList<>(first);
+        second.stream().filter(node -> classes.stream().noneMatch(existing ->
+                existing.name.equals(node.name))).forEach(classes::add);
+
+        assertThrows(IOException.class, () -> analyzer()
+                .findAnimationRouletteConfigurationExpression(classes, "forge"));
+    }
+
     @Test
     void discoversCompleteFeedbackFieldsFromCodecAndEntityLookup() throws Exception {
         Fixture fixture = fixture(true);
@@ -221,6 +245,33 @@ final class JarStructureAnalyzerTest {
         node.name = name;
         node.superName = "java/lang/Object";
         return node;
+    }
+
+    private static List<ClassNode> rouletteFixture(String ownerName) {
+        ClassNode owner = classNode(ownerName);
+        owner.superName = "net/minecraft/client/gui/screens/Screen";
+        owner.fields.add(new FieldNode(Opcodes.ACC_PRIVATE, "state", "Ltest/State;",
+                null, null));
+        MethodNode method = new MethodNode(Opcodes.ACC_PRIVATE, "executeConfig",
+                "(Ljava/lang/String;Ljava/util/function/Consumer;)V", null, null);
+        method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
+        method.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "test/Parser", "parse",
+                "(Ljava/lang/String;)Ltest/Expression;", false));
+        method.instructions.add(new VarInsnNode(Opcodes.ASTORE, 3));
+        method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        method.instructions.add(new FieldInsnNode(Opcodes.GETFIELD, owner.name, "state",
+                "Ltest/State;"));
+        method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 3));
+        method.instructions.add(new InsnNode(Opcodes.ICONST_1));
+        method.instructions.add(new InsnNode(Opcodes.ICONST_0));
+        method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 2));
+        method.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "test/State", "queue",
+                "(Ltest/Expression;ZZLjava/util/function/Consumer;)V", false));
+        method.instructions.add(new InsnNode(Opcodes.RETURN));
+        owner.methods.add(method);
+
+        return List.of(owner, classNode("test/Parser"), classNode("test/Expression"),
+                classNode("test/State"));
     }
 
     private static PlayerStateFixture playerStateFixture(boolean fullConversion) {

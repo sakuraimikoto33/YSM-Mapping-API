@@ -9,6 +9,7 @@
       "items": "net/minecraft/class_1802",
       "poseStack": "net/minecraft/class_4587",
       "multiBuffer": "net/minecraft/class_4597",
+      "screen": "net/minecraft/class_437",
       "entityTypes": [
         "net/minecraft/class_1297",
         "net/minecraft/class_1309",
@@ -31,6 +32,7 @@
       "items": "net/minecraft/world/item/Items",
       "poseStack": "com/mojang/blaze3d/vertex/PoseStack",
       "multiBuffer": "net/minecraft/client/renderer/MultiBufferSource",
+      "screen": "net/minecraft/client/gui/screens/Screen",
       "entityTypes": [
         "net/minecraft/world/entity/Entity",
         "net/minecraft/world/entity/LivingEntity",
@@ -216,6 +218,11 @@
     },
     {
       "id": "ysm.client.animated_model.tac_rifle_bones_getter.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.animation_roulette.configuration_expression.method",
       "kind": "METHOD",
       "definitionRevision": 1
     },
