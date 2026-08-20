@@ -247,9 +247,18 @@ public final class AnalysisProfile {
     }
 
     public record LoaderTypes(String livingEntity, String itemStack, String equipmentSlot,
-                              String items, String poseStack, String multiBuffer,
+                              String items, String poseStack, String multiBuffer, String screen,
                               List<String> entityTypes, List<String> playerTypes,
                               List<String> connectionTypes, List<String> componentTypes) {
+        /** Retains the constructor exposed before the optional screen type was introduced. */
+        public LoaderTypes(String livingEntity, String itemStack, String equipmentSlot,
+                String items, String poseStack, String multiBuffer,
+                List<String> entityTypes, List<String> playerTypes,
+                List<String> connectionTypes, List<String> componentTypes) {
+            this(livingEntity, itemStack, equipmentSlot, items, poseStack, multiBuffer,
+                    null, entityTypes, playerTypes, connectionTypes, componentTypes);
+        }
+
         private LoaderTypes validated() {
             List<String> entities = List.copyOf(Objects.requireNonNull(entityTypes,
                     "entityTypes"));
@@ -263,9 +272,12 @@ public final class AnalysisProfile {
             requireNonEmpty(players, "playerTypes");
             requireNonEmpty(connections, "connectionTypes");
             requireNonEmpty(components, "componentTypes");
+            String validatedPoseStack = internal(poseStack);
+            String validatedScreen = screen == null || screen.isBlank()
+                    ? defaultScreen(validatedPoseStack) : internal(screen);
             return new LoaderTypes(internal(livingEntity), internal(itemStack),
-                    internal(equipmentSlot), internal(items), internal(poseStack),
-                    internal(multiBuffer),
+                    internal(equipmentSlot), internal(items), validatedPoseStack,
+                    internal(multiBuffer), validatedScreen,
                     entities.stream().map(LoaderTypes::internal).distinct().toList(),
                     players.stream().map(LoaderTypes::internal).distinct().toList(),
                     connections.stream().map(LoaderTypes::internal).distinct().toList(),
@@ -284,6 +296,12 @@ public final class AnalysisProfile {
                 throw new IllegalArgumentException("Invalid internal type name: " + result);
             }
             return result;
+        }
+
+        private static String defaultScreen(String poseStack) {
+            return poseStack.startsWith("net/minecraft/class_")
+                    ? "net/minecraft/class_437"
+                    : "net/minecraft/client/gui/screens/Screen";
         }
     }
 
