@@ -75,6 +75,9 @@ public final class YsmSymbols {
             methodKey("ysm.client.texture_cache.acquire.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_TEXTURE_LOCATION_GETTER =
             methodKey("ysm.client.texture_cache.location_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol>
+            ANIMATION_ROULETTE_CONFIGURATION_EXPRESSION =
+            methodKey("ysm.client.animation_roulette.configuration_expression.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_CATALOG_DELTA_CALLBACK =
             methodKey("ysm.client.model_manager.catalog_delta_callback.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_PACK_MAP_GETTER =

@@ -79,6 +79,7 @@ class FixtureCatalogTest {
         loader.put("items", "example/Items");
         loader.put("poseStack", "example/Pose");
         loader.put("multiBuffer", "example/Buffer");
+        loader.put("screen", "example/Screen");
         loader.put("entityTypes", List.of("example/Entity"));
         loader.put("playerTypes", List.of("example/Player"));
         loader.put("connectionTypes", List.of("example/Connection"));
