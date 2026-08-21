@@ -154,10 +154,20 @@ public final class YsmSymbols {
             fieldKey("ysm.player_state.decoded_roaming.field");
     public static final YsmSymbolKey<YsmClassSymbol> PLAYER_STATE_CAPABILITY_CLASS =
             classKey("ysm.player_state.capability.class");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ACTIVE_ANIMATION_GETTER =
+            methodKey("ysm.player_state.active_animation_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ANIMATION_PLAYING_GETTER =
+            methodKey("ysm.player_state.animation_playing_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ANIMATION_STOP_PACKET_FACTORY =
+            methodKey("ysm.player_state.animation_stop_packet_factory.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ANIMATION_STOP_SENDER =
+            methodKey("ysm.player_state.animation_stop_sender.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ROAMING_PROVIDER_GETTER =
             methodKey("ysm.player_state.roaming_provider_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ROAMING_VALUE_GETTER =
             methodKey("ysm.player_state.roaming_value_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ROAMING_VALUE_SETTER =
+            methodKey("ysm.player_state.roaming_value_setter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ROAMING_NAME_HASHER =
             methodKey("ysm.player_state.roaming_name_hasher.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_FULL_ROAMING_INITIALIZER =
