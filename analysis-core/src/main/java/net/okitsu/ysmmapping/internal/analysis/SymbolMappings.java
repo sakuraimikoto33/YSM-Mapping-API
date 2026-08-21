@@ -101,17 +101,27 @@ public final class SymbolMappings {
                 build.playerStateDecodedRoamingField());
         values.put(YsmSymbols.PLAYER_STATE_CAPABILITY_CLASS,
                 new YsmClassSymbol(build.playerStateCapabilityClass()));
+        method(values, YsmSymbols.PLAYER_STATE_ACTIVE_ANIMATION_GETTER,
+                build.playerStateActiveAnimationGetter());
+        method(values, YsmSymbols.PLAYER_STATE_ANIMATION_PLAYING_GETTER,
+                build.playerStateAnimationPlayingGetter());
+        method(values, YsmSymbols.PLAYER_STATE_ANIMATION_STOP_PACKET_FACTORY,
+                build.playerStateAnimationStopPacketFactory());
+        method(values, YsmSymbols.PLAYER_STATE_ANIMATION_STOP_SENDER,
+                build.playerStateAnimationStopSender());
         method(values, YsmSymbols.PLAYER_STATE_ROAMING_PROVIDER_GETTER,
                 build.playerStateRoamingProviderGetter());
         method(values, YsmSymbols.PLAYER_STATE_ROAMING_VALUE_GETTER,
                 build.playerStateRoamingValueGetter());
+        method(values, YsmSymbols.PLAYER_STATE_ROAMING_VALUE_SETTER,
+                build.playerStateRoamingValueSetter());
         method(values, YsmSymbols.PLAYER_STATE_ROAMING_NAME_HASHER,
                 build.playerStateRoamingNameHasher());
         method(values, YsmSymbols.PLAYER_STATE_FULL_ROAMING_INITIALIZER,
                 build.playerStateFullRoamingInitializer());
 
-        if (values.size() != 68) {
-            throw new IOException("YSM mapping does not cover the 68-symbol legacy surface");
+        if (values.size() != 73) {
+            throw new IOException("YSM mapping does not cover the 73-symbol legacy surface");
         }
         return Map.copyOf(values);
     }
