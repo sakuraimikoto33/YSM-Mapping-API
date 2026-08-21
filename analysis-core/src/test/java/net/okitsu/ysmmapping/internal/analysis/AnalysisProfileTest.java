@@ -16,6 +16,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AnalysisProfileTest {
@@ -36,7 +37,7 @@ class AnalysisProfileTest {
         assertEquals(left.registryDefinitionSha256(), right.registryDefinitionSha256());
         assertEquals("example/Living", left.loader("alpha").livingEntity());
         assertEquals("TEST", left.packets().get(1).name());
-        assertEquals(71, left.definitions().values().stream()
+        assertEquals(72, left.definitions().values().stream()
                 .filter(value -> YsmSymbols.usesServerlessAnalyzer(value.id()))
                 .count());
         assertEquals(9, left.definitions().values().stream()
@@ -77,6 +78,25 @@ class AnalysisProfileTest {
                 () -> AnalysisProfile.load(write("duplicate.json", GSON.toJson(value))));
     }
 
+    @Test
+    void legacyLoaderProfileWithoutScreenRemainsSupported() throws Exception {
+        JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
+                .getAsJsonObject();
+        value.getAsJsonObject("loaders").getAsJsonObject("alpha").remove("screen");
+
+        AnalysisProfile loaded = AnalysisProfile.load(
+                write("legacy.json", GSON.toJson(value)));
+
+        assertEquals("net/minecraft/client/gui/screens/Screen",
+                loaded.loader("alpha").screen());
+        AnalysisProfile.LoaderTypes constructed = new AnalysisProfile.LoaderTypes(
+                "example/Living", "example/Stack", "example/Slot", "example/Items",
+                "example/Pose", "example/Buffer", List.of("example/Entity"),
+                List.of("example/Player"), List.of("example/Connection"),
+                List.of("example/Component"));
+        assertNull(constructed.screen());
+    }
+
     private Path write(String name, String value) throws Exception {
         Path path = temporary.resolve(name);
         Files.writeString(path, value);
@@ -101,6 +121,7 @@ class AnalysisProfileTest {
         loader.put("items", "example/Items");
         loader.put("poseStack", "example/Pose");
         loader.put("multiBuffer", "example/Buffer");
+        loader.put("screen", "example/Screen");
         loader.put("entityTypes", List.of("example/Entity"));
         loader.put("playerTypes", List.of("example/Player"));
         loader.put("connectionTypes", List.of("example/Connection"));

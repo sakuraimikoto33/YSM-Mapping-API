@@ -18,6 +18,7 @@ public record YsmCompatibilityMap(String id, String minecraftVersion, String loa
                                   MethodSymbol clientPendingCountGetter,
                                   MethodSymbol clientModelFlushPending,
                                   MethodSymbol clientModelRawSender,
+                                  MethodSymbol animationRouletteConfigurationExpression,
                                   MethodSymbol serverModelReceive,
                                   MethodSymbol serverModelReload,
                                   MethodSymbol serverModelSync,

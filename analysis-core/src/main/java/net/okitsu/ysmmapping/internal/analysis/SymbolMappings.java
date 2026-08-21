@@ -44,6 +44,8 @@ public final class SymbolMappings {
                 build.clientPendingCountGetter());
         method(values, YsmSymbols.CLIENT_MODEL_FLUSH_PENDING, build.clientModelFlushPending());
         method(values, YsmSymbols.CLIENT_MODEL_RAW_SENDER, build.clientModelRawSender());
+        method(values, YsmSymbols.ANIMATION_ROULETTE_CONFIGURATION_EXPRESSION,
+                build.animationRouletteConfigurationExpression());
         method(values, YsmSymbols.SERVER_MODEL_RECEIVE, build.serverModelReceive());
         method(values, YsmSymbols.SERVER_MODEL_RELOAD, build.serverModelReload());
         method(values, YsmSymbols.SERVER_MODEL_SYNC, build.serverModelSync());
@@ -108,8 +110,8 @@ public final class SymbolMappings {
         method(values, YsmSymbols.PLAYER_STATE_FULL_ROAMING_INITIALIZER,
                 build.playerStateFullRoamingInitializer());
 
-        if (values.size() != 67) {
-            throw new IOException("YSM mapping does not cover the 67-symbol legacy surface");
+        if (values.size() != 68) {
+            throw new IOException("YSM mapping does not cover the 68-symbol legacy surface");
         }
         return Map.copyOf(values);
     }

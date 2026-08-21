@@ -138,6 +138,8 @@ public final class JarStructureAnalyzer {
                 method -> isStatic(method) && !isNative(method)
                         && method.desc.equals("(Ljava/nio/ByteBuffer;)V"),
                 "client raw model sender");
+        YsmCompatibilityMap.MethodSymbol rouletteConfigurationExpression =
+                findAnimationRouletteConfigurationExpression(classes, artifact.loader());
         ClassNode serverManager = serverReceive == null ? null : classesByName.get(serverReceive.owner);
         YsmCompatibilityMap.MethodSymbol reload = findDeclared(serverManager,
                 method -> isStatic(method)
@@ -187,6 +189,7 @@ public final class JarStructureAnalyzer {
                 symbol(clientStart), symbol(clientConnected), clientReset,
                 clientModelMap, clientModelLookup, clientCatalogDelta, clientPackMap,
                 clientPendingCount, clientFlushPending, clientRawSender,
+                rouletteConfigurationExpression,
                 symbol(serverReceive), reload, sync,
                 syncResult.successGetter(), syncResult.errorGetter(),
                 serverModelMap, serverModelMapField, streamCallback, payloadFactory, payloadCallback,
@@ -281,6 +284,7 @@ public final class JarStructureAnalyzer {
         } catch (IOException exception) {
             fail(diagnostics, exception, YsmSymbols.CLIENT_NOT_DISPLAY_MODELS);
         }
+        recoverAnimationRoulette(classes, artifact.loader(), values, diagnostics);
         try {
             ServerSyncResultSymbols result = findServerSyncResultSymbols(classes);
             putMethod(values, diagnostics, YsmSymbols.SERVER_SYNC_RESULT_SUCCESS_GETTER,
@@ -1075,6 +1079,86 @@ public final class JarStructureAnalyzer {
                 "roaming variable value getter");
         return new RoamingProviderSymbols(methodSymbol(capability, providerGetter),
                 methodSymbol(provider, valueGetter));
+    }
+
+    YsmCompatibilityMap.MethodSymbol findAnimationRouletteConfigurationExpression(
+            List<ClassNode> classes, String loader) throws IOException {
+        String screen = profile.loader(loader).screen();
+        Map<String, ClassNode> classesByName = new HashMap<>();
+        classes.forEach(node -> classesByName.put(node.name, node));
+        List<OwnedMethod> candidates = new ArrayList<>();
+        for (ClassNode owner : classes) {
+            if (!screen.equals(owner.superName)) {
+                continue;
+            }
+            for (MethodNode method : owner.methods) {
+                if (isStatic(method) || (method.access & Opcodes.ACC_PRIVATE) == 0
+                        || !method.desc.equals(
+                        "(Ljava/lang/String;Ljava/util/function/Consumer;)V")) {
+                    continue;
+                }
+                if (isConfigurationExpressionExecutor(owner, method, classesByName)) {
+                    candidates.add(new OwnedMethod(owner, method));
+                }
+            }
+        }
+        List<OwnedMethod> distinct = candidates.stream().distinct().toList();
+        if (distinct.size() != 1) {
+            throw new IOException("Expected one animation roulette configuration expression "
+                    + "executor, found " + distinct.size());
+        }
+        OwnedMethod result = distinct.get(0);
+        return methodSymbol(result.owner(), result.method());
+    }
+
+    private static boolean isConfigurationExpressionExecutor(ClassNode owner, MethodNode method,
+            Map<String, ClassNode> classes) {
+        for (MethodInsnNode parser : invocationNodes(method)) {
+            Type expressionType = Type.getReturnType(parser.desc);
+            if (parser.getOpcode() != Opcodes.INVOKESTATIC
+                    || !parser.desc.startsWith("(Ljava/lang/String;)")
+                    || Type.getArgumentTypes(parser.desc).length != 1
+                    || expressionType.getSort() != Type.OBJECT
+                    || !classes.containsKey(expressionType.getInternalName())) {
+                continue;
+            }
+            String executorDescriptor = '(' + expressionType.getDescriptor()
+                    + "ZZLjava/util/function/Consumer;)V";
+            for (MethodInsnNode executor : invocationNodes(method)) {
+                if (executor.getOpcode() == Opcodes.INVOKESTATIC
+                        || !executor.desc.equals(executorDescriptor)) {
+                    continue;
+                }
+                String ownerDescriptor = 'L' + executor.owner + ';';
+                boolean readsExecutorOwner = false;
+                for (AbstractInsnNode instruction : method.instructions) {
+                    if (instruction instanceof FieldInsnNode field
+                            && field.getOpcode() == Opcodes.GETFIELD
+                            && field.owner.equals(owner.name)
+                            && field.desc.equals(ownerDescriptor)) {
+                        readsExecutorOwner = true;
+                        break;
+                    }
+                }
+                if (readsExecutorOwner) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void recoverAnimationRoulette(List<ClassNode> classes, String loader,
+            Map<YsmSymbolKey<?>, YsmResolvedSymbol> values,
+            Map<YsmSymbolKey<?>, String> diagnostics) {
+        try {
+            putMethod(values, diagnostics,
+                    YsmSymbols.ANIMATION_ROULETTE_CONFIGURATION_EXPRESSION,
+                    findAnimationRouletteConfigurationExpression(classes, loader));
+        } catch (IOException exception) {
+            fail(diagnostics, exception,
+                    YsmSymbols.ANIMATION_ROULETTE_CONFIGURATION_EXPRESSION);
+        }
     }
 
     private static MethodNode uniqueMethod(ClassNode owner, Predicate<MethodNode> filter,
@@ -2004,4 +2088,8 @@ public final class JarStructureAnalyzer {
             YsmCompatibilityMap.MethodSymbol providerGetter,
             YsmCompatibilityMap.MethodSymbol valueGetter) {
     }
+
+    private record OwnedMethod(ClassNode owner, MethodNode method) {
+    }
+
 }
