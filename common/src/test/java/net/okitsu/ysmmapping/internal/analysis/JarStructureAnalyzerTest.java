@@ -122,8 +122,15 @@ final class JarStructureAnalyzerTest {
         assertEquals("flags", symbols.flagsField().name());
         assertEquals("decodedRoaming", symbols.decodedRoamingField().name());
         assertEquals("test/Capability", symbols.capabilityClass());
+        assertEquals("activeAnimation", symbols.activeAnimationGetter().name());
+        assertEquals("animationPlaying", symbols.animationPlayingGetter().name());
+        assertEquals("test/StopPacket", symbols.animationStopPacketFactory().owner());
+        assertEquals("create", symbols.animationStopPacketFactory().name());
+        assertEquals("test/Network", symbols.animationStopSender().owner());
+        assertEquals("send", symbols.animationStopSender().name());
         assertEquals("provider", symbols.roamingProviderGetter().name());
         assertEquals("get", symbols.roamingValueGetter().name());
+        assertEquals("put", symbols.roamingValueSetter().name());
         assertEquals("hash", symbols.roamingNameHasher().name());
         assertEquals("initialize", symbols.fullRoamingInitializer().name());
     }
@@ -280,7 +287,65 @@ final class JarStructureAnalyzerTest {
         packet.fields.add(new FieldNode(Opcodes.ACC_PUBLIC, "decodedRoaming",
                 "Lit/unimi/dsi/fastutil/ints/Int2FloatMap;", null, null));
 
+        ClassNode playerState = classNode("test/CustomPlayer");
+        playerState.fields.add(new FieldNode(Opcodes.ACC_PRIVATE, "animationName",
+                "Ljava/lang/String;", null, null));
+        playerState.fields.add(new FieldNode(Opcodes.ACC_PRIVATE, "playing",
+                "Z", null, null));
+        playerState.fields.add(new FieldNode(Opcodes.ACC_PRIVATE, "disabled",
+                "Z", null, null));
+        MethodNode requestAnimation = new MethodNode(Opcodes.ACC_PUBLIC,
+                "requestAnimation", "(Ljava/lang/String;)V", null, null);
+        requestAnimation.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        requestAnimation.instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
+        requestAnimation.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD,
+                playerState.name, "animationName", "Ljava/lang/String;"));
+        requestAnimation.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        requestAnimation.instructions.add(new InsnNode(Opcodes.ICONST_1));
+        requestAnimation.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD,
+                playerState.name, "playing", "Z"));
+        requestAnimation.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        requestAnimation.instructions.add(new InsnNode(Opcodes.ICONST_1));
+        requestAnimation.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD,
+                playerState.name, "disabled", "Z"));
+        requestAnimation.instructions.add(new InsnNode(Opcodes.RETURN));
+        playerState.methods.add(requestAnimation);
+        MethodNode clearAnimation = new MethodNode(Opcodes.ACC_PUBLIC,
+                "clearAnimation", "()V", null, null);
+        clearAnimation.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        clearAnimation.instructions.add(new InsnNode(Opcodes.ICONST_0));
+        clearAnimation.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD,
+                playerState.name, "playing", "Z"));
+        clearAnimation.instructions.add(new InsnNode(Opcodes.RETURN));
+        playerState.methods.add(clearAnimation);
+        MethodNode activeAnimation = new MethodNode(Opcodes.ACC_PUBLIC,
+                "activeAnimation", "()Ljava/lang/String;", null, null);
+        activeAnimation.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        activeAnimation.instructions.add(new FieldInsnNode(Opcodes.GETFIELD,
+                playerState.name, "animationName", "Ljava/lang/String;"));
+        activeAnimation.instructions.add(new InsnNode(Opcodes.ARETURN));
+        playerState.methods.add(activeAnimation);
+        MethodNode animationPlaying = new MethodNode(Opcodes.ACC_PUBLIC,
+                "animationPlaying", "()Z", null, null);
+        animationPlaying.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        animationPlaying.instructions.add(new FieldInsnNode(Opcodes.GETFIELD,
+                playerState.name, "playing", "Z"));
+        animationPlaying.instructions.add(new InsnNode(Opcodes.IRETURN));
+        playerState.methods.add(animationPlaying);
+        MethodNode finishAnimation = new MethodNode(Opcodes.ACC_PUBLIC,
+                "finishAnimation", "(FZ)V", null, null);
+        finishAnimation.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        finishAnimation.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
+                playerState.name, "clearAnimation", "()V", false));
+        finishAnimation.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC,
+                "test/StopPacket", "create", "()Ltest/StopPacket;", false));
+        finishAnimation.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC,
+                "test/Network", "send", "(Ljava/lang/Object;)V", false));
+        finishAnimation.instructions.add(new InsnNode(Opcodes.RETURN));
+        playerState.methods.add(finishAnimation);
+
         ClassNode capability = classNode("test/Capability");
+        capability.superName = playerState.name;
         capability.fields.add(new FieldNode(Opcodes.ACC_PRIVATE, "current",
                 "Ltest/Provider;", null, null));
         capability.methods.add(new MethodNode(Opcodes.ACC_PUBLIC, "<init>",
@@ -305,6 +370,15 @@ final class JarStructureAnalyzerTest {
         provider.access = Opcodes.ACC_PUBLIC | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT;
         provider.methods.add(new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT,
                 "get", "(I)Ljava/lang/Object;", null, null));
+        provider.methods.add(new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT,
+                "put", "(ILjava/lang/Object;)V", null, null));
+
+        ClassNode stopPacket = classNode("test/StopPacket");
+        stopPacket.methods.add(new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+                "create", "()Ltest/StopPacket;", null, null));
+        ClassNode network = classNode("test/Network");
+        network.methods.add(new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+                "send", "(Ljava/lang/Object;)V", null, null));
 
         String self = "L" + packet.name + ";";
         MethodNode animation = new MethodNode(Opcodes.ACC_PUBLIC, "animation",
@@ -375,6 +449,13 @@ final class JarStructureAnalyzerTest {
                 "decodedRoaming", "Lit/unimi/dsi/fastutil/ints/Int2FloatMap;"));
         apply.instructions.add(new InsnNode(Opcodes.POP));
         apply.instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
+        apply.instructions.add(new InsnNode(Opcodes.ACONST_NULL));
+        apply.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, playerState.name,
+                "requestAnimation", "(Ljava/lang/String;)V", false));
+        apply.instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
+        apply.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, playerState.name,
+                "clearAnimation", "()V", false));
+        apply.instructions.add(new VarInsnNode(Opcodes.ALOAD, 1));
         apply.instructions.add(new InsnNode(Opcodes.ICONST_0));
         apply.instructions.add(new InsnNode(Opcodes.ACONST_NULL));
         apply.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "test/Capability",
@@ -393,7 +474,9 @@ final class JarStructureAnalyzerTest {
         packet.methods.add(handler);
 
         return new PlayerStateFixture(packet, Map.of(packet.name, packet,
-                capability.name, capability, provider.name, provider));
+                capability.name, capability, playerState.name, playerState,
+                provider.name, provider, stopPacket.name, stopPacket,
+                network.name, network));
     }
 
     private record Fixture(ClassNode packet, Map<String, ClassNode> classes) {
