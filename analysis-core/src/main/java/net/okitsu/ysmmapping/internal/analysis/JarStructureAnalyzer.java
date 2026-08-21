@@ -26,6 +26,7 @@ import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -203,8 +204,12 @@ public final class JarStructureAnalyzer {
                 playerState.roamingSetter(), playerState.codecWriter(),
                 playerState.codecDecoder(), playerState.clientHandler(),
                 playerState.flagsField(), playerState.decodedRoamingField(),
-                playerState.capabilityClass(), playerState.roamingProviderGetter(),
-                playerState.roamingValueGetter(), playerState.roamingNameHasher(),
+                playerState.capabilityClass(), playerState.activeAnimationGetter(),
+                playerState.animationPlayingGetter(),
+                playerState.animationStopPacketFactory(),
+                playerState.animationStopSender(), playerState.roamingProviderGetter(),
+                playerState.roamingValueGetter(), playerState.roamingValueSetter(),
+                playerState.roamingNameHasher(),
                 playerState.fullRoamingInitializer());
         } catch (IOException exception) {
             throw new StructuralAnalysisException(exception.getMessage(), exception);
@@ -403,10 +408,20 @@ public final class JarStructureAnalyzer {
                     result.decodedRoamingField());
             values.put(YsmSymbols.PLAYER_STATE_CAPABILITY_CLASS,
                     new YsmClassSymbol(result.capabilityClass()));
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ACTIVE_ANIMATION_GETTER,
+                    result.activeAnimationGetter());
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ANIMATION_PLAYING_GETTER,
+                    result.animationPlayingGetter());
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ANIMATION_STOP_PACKET_FACTORY,
+                    result.animationStopPacketFactory());
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ANIMATION_STOP_SENDER,
+                    result.animationStopSender());
             putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ROAMING_PROVIDER_GETTER,
                     result.roamingProviderGetter());
             putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ROAMING_VALUE_GETTER,
                     result.roamingValueGetter());
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ROAMING_VALUE_SETTER,
+                    result.roamingValueSetter());
             putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_ROAMING_NAME_HASHER,
                     result.roamingNameHasher());
             putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_FULL_ROAMING_INITIALIZER,
@@ -419,8 +434,13 @@ public final class JarStructureAnalyzer {
                     YsmSymbols.PLAYER_STATE_CLIENT_HANDLER, YsmSymbols.PLAYER_STATE_FLAGS_FIELD,
                     YsmSymbols.PLAYER_STATE_DECODED_ROAMING_FIELD,
                     YsmSymbols.PLAYER_STATE_CAPABILITY_CLASS,
+                    YsmSymbols.PLAYER_STATE_ACTIVE_ANIMATION_GETTER,
+                    YsmSymbols.PLAYER_STATE_ANIMATION_PLAYING_GETTER,
+                    YsmSymbols.PLAYER_STATE_ANIMATION_STOP_PACKET_FACTORY,
+                    YsmSymbols.PLAYER_STATE_ANIMATION_STOP_SENDER,
                     YsmSymbols.PLAYER_STATE_ROAMING_PROVIDER_GETTER,
                     YsmSymbols.PLAYER_STATE_ROAMING_VALUE_GETTER,
+                    YsmSymbols.PLAYER_STATE_ROAMING_VALUE_SETTER,
                     YsmSymbols.PLAYER_STATE_ROAMING_NAME_HASHER,
                     YsmSymbols.PLAYER_STATE_FULL_ROAMING_INITIALIZER);
         }
@@ -1025,13 +1045,155 @@ public final class JarStructureAnalyzer {
                 || !fullFlagCheck || !reachable(packet, clientHandler, initializerCaller)) {
             throw new IOException("Packet 21 client handler does not initialize full roaming state");
         }
+        WheelStateSymbols wheel = findWheelStateSymbols(
+                classes, capability, initializerCaller);
 
         return new PlayerStateSymbols(animation, roaming, methodSymbol(packet, writer),
                 methodSymbol(packet, decoder), methodSymbol(packet, clientHandler),
                 fieldSymbol(packet, flags), fieldSymbol(packet, decodedRoaming),
-                capability.name, provider.providerGetter(), provider.valueGetter(),
-                methodSymbol(roamingNameHasher),
+                capability.name, wheel.activeAnimationGetter(),
+                wheel.animationPlayingGetter(), wheel.animationStopPacketFactory(),
+                wheel.animationStopSender(), provider.providerGetter(), provider.valueGetter(),
+                provider.valueSetter(), methodSymbol(roamingNameHasher),
                 methodSymbol(fullInitializer));
+    }
+
+    private static WheelStateSymbols findWheelStateSymbols(
+            Map<String, ClassNode> classes, ClassNode capability,
+            MethodNode stateApplicator) throws IOException {
+        Set<String> hierarchy = new LinkedHashSet<>();
+        ClassNode cursor = capability;
+        while (cursor != null && hierarchy.add(cursor.name)) {
+            cursor = classes.get(cursor.superName);
+        }
+
+        MethodInsnNode requestInvocation = uniqueInvocation(invocationNodes(stateApplicator),
+                invocation -> hierarchy.contains(invocation.owner)
+                        && invocation.desc.equals("(Ljava/lang/String;)V"),
+                "player roulette animation request");
+        OwnedMethod request = resolveHierarchyMethod(classes, requestInvocation.owner,
+                requestInvocation.name, requestInvocation.desc);
+        if (request == null) {
+            throw new IOException("Player roulette animation request is not declared");
+        }
+
+        List<YsmCompatibilityMap.FieldSymbol> animationFields = instanceFieldWrites(request.method())
+                .stream().filter(field -> field.descriptor().equals("Ljava/lang/String;"))
+                .distinct().toList();
+        if (animationFields.size() != 1) {
+            throw new IOException("Expected one roulette animation name field, found "
+                    + animationFields.size());
+        }
+        YsmCompatibilityMap.FieldSymbol animationField = animationFields.get(0);
+        List<YsmCompatibilityMap.FieldSymbol> requestFlags = instanceFieldWrites(request.method())
+                .stream().filter(field -> field.descriptor().equals("Z"))
+                .distinct().toList();
+
+        List<OwnedMethod> clearMethods = invocationNodes(stateApplicator).stream()
+                .filter(invocation -> hierarchy.contains(invocation.owner)
+                        && invocation.desc.equals("()V"))
+                .map(invocation -> resolveHierarchyMethod(classes, invocation.owner,
+                        invocation.name, invocation.desc))
+                .filter(java.util.Objects::nonNull)
+                .filter(method -> instanceFieldWrites(method.method()).stream()
+                        .anyMatch(field -> field.descriptor().equals("Z")
+                                && requestFlags.contains(field)))
+                .distinct().toList();
+        if (clearMethods.size() != 1) {
+            throw new IOException("Expected one roulette playing flag cleared by packet state, found "
+                    + clearMethods.size());
+        }
+        OwnedMethod clear = clearMethods.get(0);
+        List<YsmCompatibilityMap.FieldSymbol> clearedFlags = instanceFieldWrites(clear.method())
+                .stream().filter(field -> field.descriptor().equals("Z")
+                        && requestFlags.contains(field)).distinct().toList();
+        if (clearedFlags.size() != 1) {
+            throw new IOException("Expected one roulette playing flag in the clear method, found "
+                    + clearedFlags.size());
+        }
+        YsmCompatibilityMap.FieldSymbol playingField = clearedFlags.get(0);
+
+        ClassNode animationOwner = requireClass(classes, animationField.owner(),
+                "roulette animation name owner");
+        MethodNode animationGetter = uniqueMethod(animationOwner,
+                method -> !isStatic(method) && isPublic(method)
+                        && method.desc.equals("()Ljava/lang/String;")
+                        && accessesInstanceField(method, Opcodes.GETFIELD, animationField),
+                "roulette animation name getter");
+        ClassNode playingOwner = requireClass(classes, playingField.owner(),
+                "roulette playing flag owner");
+        MethodNode playingGetter = uniqueMethod(playingOwner,
+                method -> !isStatic(method) && isPublic(method)
+                        && method.desc.equals("()Z")
+                        && accessesInstanceField(method, Opcodes.GETFIELD, playingField),
+                "roulette animation playing getter");
+        List<OwnedMethod> completionMethods = hierarchy.stream()
+                .map(classes::get).filter(java.util.Objects::nonNull)
+                .flatMap(owner -> owner.methods.stream().map(method ->
+                        new OwnedMethod(owner, method)))
+                .filter(method -> !isStatic(method.method())
+                        && method.method().desc.equals("(FZ)V")
+                        && hasInvocation(method.method(), invocation ->
+                        invocation.owner.equals(clear.owner().name)
+                                && invocation.name.equals(clear.method().name)
+                                && invocation.desc.equals(clear.method().desc)))
+                .toList();
+        if (completionMethods.size() != 1) {
+            throw new IOException("Expected one roulette completion method, found "
+                    + completionMethods.size());
+        }
+        List<MethodInsnNode> completionCalls = invocationNodes(
+                completionMethods.get(0).method());
+        MethodInsnNode stopFactory = uniqueInvocation(completionCalls,
+                invocation -> invocation.getOpcode() == Opcodes.INVOKESTATIC
+                        && Type.getArgumentTypes(invocation.desc).length == 0
+                        && Type.getReturnType(invocation.desc).getSort() == Type.OBJECT,
+                "roulette stop packet factory");
+        MethodInsnNode stopSender = uniqueInvocation(completionCalls,
+                invocation -> invocation.getOpcode() == Opcodes.INVOKESTATIC
+                        && invocation.desc.equals("(Ljava/lang/Object;)V"),
+                "roulette stop packet sender");
+        return new WheelStateSymbols(methodSymbol(animationOwner, animationGetter),
+                methodSymbol(playingOwner, playingGetter), methodSymbol(stopFactory),
+                methodSymbol(stopSender));
+    }
+
+    private static OwnedMethod resolveHierarchyMethod(Map<String, ClassNode> classes,
+            String ownerName, String name, String descriptor) {
+        ClassNode owner = classes.get(ownerName);
+        Set<String> visited = new HashSet<>();
+        while (owner != null && visited.add(owner.name)) {
+            MethodNode method = declaredMethod(owner, name, descriptor);
+            if (method != null) {
+                return new OwnedMethod(owner, method);
+            }
+            owner = classes.get(owner.superName);
+        }
+        return null;
+    }
+
+    private static List<YsmCompatibilityMap.FieldSymbol> instanceFieldWrites(MethodNode method) {
+        List<YsmCompatibilityMap.FieldSymbol> result = new ArrayList<>();
+        for (AbstractInsnNode instruction : method.instructions) {
+            if (instruction instanceof FieldInsnNode field
+                    && field.getOpcode() == Opcodes.PUTFIELD) {
+                result.add(new YsmCompatibilityMap.FieldSymbol(
+                        field.owner, field.name, field.desc));
+            }
+        }
+        return result;
+    }
+
+    private static boolean accessesInstanceField(MethodNode method, int opcode,
+            YsmCompatibilityMap.FieldSymbol field) {
+        for (AbstractInsnNode instruction : method.instructions) {
+            if (instruction instanceof FieldInsnNode access && access.getOpcode() == opcode
+                    && access.owner.equals(field.owner()) && access.name.equals(field.name())
+                    && access.desc.equals(field.descriptor())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static RoamingProviderSymbols findRoamingProviderSymbols(
@@ -1077,8 +1239,12 @@ public final class JarStructureAnalyzer {
                 method -> !isStatic(method) && isPublic(method)
                         && method.desc.equals("(I)Ljava/lang/Object;"),
                 "roaming variable value getter");
+        MethodNode valueSetter = uniqueMethod(provider,
+                method -> !isStatic(method) && isPublic(method)
+                        && method.desc.equals("(ILjava/lang/Object;)V"),
+                "roaming variable value setter");
         return new RoamingProviderSymbols(methodSymbol(capability, providerGetter),
-                methodSymbol(provider, valueGetter));
+                methodSymbol(provider, valueGetter), methodSymbol(provider, valueSetter));
     }
 
     YsmCompatibilityMap.MethodSymbol findAnimationRouletteConfigurationExpression(
@@ -2078,15 +2244,28 @@ public final class JarStructureAnalyzer {
                               YsmCompatibilityMap.FieldSymbol flagsField,
                               YsmCompatibilityMap.FieldSymbol decodedRoamingField,
                               String capabilityClass,
+                              YsmCompatibilityMap.MethodSymbol activeAnimationGetter,
+                              YsmCompatibilityMap.MethodSymbol animationPlayingGetter,
+                              YsmCompatibilityMap.MethodSymbol animationStopPacketFactory,
+                              YsmCompatibilityMap.MethodSymbol animationStopSender,
                               YsmCompatibilityMap.MethodSymbol roamingProviderGetter,
                               YsmCompatibilityMap.MethodSymbol roamingValueGetter,
+                              YsmCompatibilityMap.MethodSymbol roamingValueSetter,
                               YsmCompatibilityMap.MethodSymbol roamingNameHasher,
                               YsmCompatibilityMap.MethodSymbol fullRoamingInitializer) {
     }
 
+    private record WheelStateSymbols(
+            YsmCompatibilityMap.MethodSymbol activeAnimationGetter,
+            YsmCompatibilityMap.MethodSymbol animationPlayingGetter,
+            YsmCompatibilityMap.MethodSymbol animationStopPacketFactory,
+            YsmCompatibilityMap.MethodSymbol animationStopSender) {
+    }
+
     private record RoamingProviderSymbols(
             YsmCompatibilityMap.MethodSymbol providerGetter,
-            YsmCompatibilityMap.MethodSymbol valueGetter) {
+            YsmCompatibilityMap.MethodSymbol valueGetter,
+            YsmCompatibilityMap.MethodSymbol valueSetter) {
     }
 
     private record OwnedMethod(ClassNode owner, MethodNode method) {
