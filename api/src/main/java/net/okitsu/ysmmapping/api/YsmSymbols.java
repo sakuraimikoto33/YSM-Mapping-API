@@ -30,6 +30,14 @@ public final class YsmSymbols {
             methodKey("ysm.client.model_container.data_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_TEXTURES_GETTER =
             methodKey("ysm.client.model_data.textures_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_RESOURCES_GETTER =
+            methodKey("ysm.client.model_container.resources_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_SOUNDS_GETTER =
+            methodKey("ysm.client.model_resources.sounds_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_AUDIO_STREAM_CACHE_ACQUIRE =
+            methodKey("ysm.client.audio_stream_cache.acquire.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_AUDIO_STREAM_OPEN =
+            methodKey("ysm.client.audio_stream_provider.open.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_TEXTURE_CACHE_ACQUIRE =
             methodKey("ysm.client.texture_cache.acquire.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_TEXTURE_LOCATION_GETTER =

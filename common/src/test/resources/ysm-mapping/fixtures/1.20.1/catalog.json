@@ -64,7 +64,7 @@
     }
   ],
   "expectations": {
-  "registryTotal": 109,
+  "registryTotal": 113,
     "equipmentDirectRequiredLoaders": [
       "forge"
     ],
