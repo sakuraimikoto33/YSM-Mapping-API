@@ -227,6 +227,16 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.client.audio_stream_cache.acquire.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.audio_stream_provider.open.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.client.config.not_display_models.field",
       "kind": "FIELD",
       "definitionRevision": 1
@@ -282,6 +292,11 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.client.model_container.resources_getter.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.client.model_data.textures_getter.method",
       "kind": "METHOD",
       "definitionRevision": 1
@@ -308,6 +323,11 @@
     },
     {
       "id": "ysm.client.model_manager.start_sync.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.model_resources.sounds_getter.method",
       "kind": "METHOD",
       "definitionRevision": 1
     },
