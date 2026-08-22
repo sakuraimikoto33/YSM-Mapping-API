@@ -231,6 +231,7 @@ public final class JarStructureAnalyzer {
                     SymbolMappings.from(analyze(artifact, index)));
             Map<YsmSymbolKey<?>, String> diagnostics = new LinkedHashMap<>();
             recoverClientTextureCache(byName, values, diagnostics);
+            recoverClientAudioCache(byName, values, diagnostics);
             return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
         } catch (StructuralAnalysisException ignored) {
             // Recover independent groups below; an individual failure is recorded per key.
@@ -280,6 +281,7 @@ public final class JarStructureAnalyzer {
                     artifact.loader().equals("forge"));
             recoverClientManager(byName, registration.symbols, values, diagnostics);
             recoverClientTextureCache(byName, values, diagnostics);
+            recoverClientAudioCache(byName, values, diagnostics);
             recoverServerManager(byName, registration.symbols, values, diagnostics);
         }
 
@@ -636,6 +638,173 @@ public final class JarStructureAnalyzer {
                 && result.getSort() == Type.OBJECT;
     }
 
+    private static void recoverClientAudioCache(Map<String, ClassNode> classes,
+            Map<YsmSymbolKey<?>, YsmResolvedSymbol> values,
+            Map<YsmSymbolKey<?>, String> diagnostics) {
+        YsmSymbolKey<?>[] keys = {YsmSymbols.CLIENT_MODEL_RESOURCES_GETTER,
+                YsmSymbols.CLIENT_MODEL_SOUNDS_GETTER,
+                YsmSymbols.CLIENT_AUDIO_STREAM_CACHE_ACQUIRE,
+                YsmSymbols.CLIENT_AUDIO_STREAM_OPEN};
+        try {
+            YsmResolvedSymbol resolved = values.get(YsmSymbols.CLIENT_MODEL_LOOKUP);
+            if (!(resolved instanceof YsmMethodSymbol lookup)) {
+                throw new IOException("Client model lookup is unavailable");
+            }
+            ClientAudioCacheSymbols result = findClientAudioCacheSymbols(classes, lookup);
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_RESOURCES_GETTER,
+                    result.modelResourcesGetter());
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_MODEL_SOUNDS_GETTER,
+                    result.soundsGetter());
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_AUDIO_STREAM_CACHE_ACQUIRE,
+                    result.cacheAcquire());
+            putMethod(values, diagnostics, YsmSymbols.CLIENT_AUDIO_STREAM_OPEN,
+                    result.streamOpen());
+        } catch (IOException | RuntimeException exception) {
+            fail(diagnostics, exception, keys);
+        }
+    }
+
+    static ClientAudioCacheSymbols findClientAudioCacheSymbols(
+            Map<String, ClassNode> classes, YsmMethodSymbol lookup) throws IOException {
+        String modelType = clientModelType(classes, lookup);
+        List<ClientAudioCacheSymbols> candidates = new ArrayList<>();
+        for (ClassNode owner : classes.values()) {
+            for (MethodNode method : owner.methods) {
+                List<AbstractInsnNode> code = realInstructions(method);
+                for (int index = 0; index < code.size(); index++) {
+                    if (!(code.get(index) instanceof MethodInsnNode resourcesCall)
+                            || !resourcesCall.owner.equals(modelType)
+                            || Type.getArgumentTypes(resourcesCall.desc).length != 0
+                            || Type.getReturnType(resourcesCall.desc).getSort() != Type.OBJECT) {
+                        continue;
+                    }
+                    String resourcesType = Type.getReturnType(resourcesCall.desc)
+                            .getInternalName();
+                    if (!classes.containsKey(resourcesType)) {
+                        continue;
+                    }
+                    MethodInsnNode soundsCall = nextInvocation(code, index + 1, 4,
+                            call -> call.owner.equals(resourcesType)
+                                    && call.desc.equals("()Ljava/util/Map;"));
+                    if (soundsCall == null) {
+                        continue;
+                    }
+                    int soundsIndex = code.indexOf(soundsCall);
+                    MethodInsnNode mapLookup = nextInvocation(code, soundsIndex + 1, 5,
+                            call -> call.owner.equals("java/util/Map")
+                                    && call.name.equals("get")
+                                    && call.desc.equals(
+                                    "(Ljava/lang/Object;)Ljava/lang/Object;"));
+                    if (mapLookup == null) {
+                        continue;
+                    }
+                    int trackCastIndex = nextYsmTypeInstruction(
+                            code, code.indexOf(mapLookup) + 1, 4, classes);
+                    if (trackCastIndex < 0) {
+                        continue;
+                    }
+                    String trackType = ((TypeInsnNode) code.get(trackCastIndex)).desc;
+                    ProviderSymbols provider = findAudioProvider(classes, modelType, trackType);
+                    if (provider == null) {
+                        continue;
+                    }
+                    ClientAudioCacheSymbols candidate = new ClientAudioCacheSymbols(
+                            new YsmCompatibilityMap.MethodSymbol(resourcesCall.owner,
+                                    resourcesCall.name, resourcesCall.desc),
+                            new YsmCompatibilityMap.MethodSymbol(soundsCall.owner,
+                                    soundsCall.name, soundsCall.desc),
+                            provider.acquire(), provider.open());
+                    if (!candidates.contains(candidate)) {
+                        candidates.add(candidate);
+                    }
+                }
+            }
+        }
+        if (candidates.size() != 1) {
+            throw new IOException("Expected one client audio cache chain, found "
+                    + candidates.size());
+        }
+        return candidates.get(0);
+    }
+
+    private static ProviderSymbols findAudioProvider(Map<String, ClassNode> classes,
+            String modelType, String trackType) throws IOException {
+        List<ProviderSymbols> candidates = new ArrayList<>();
+        for (ClassNode owner : classes.values()) {
+            for (MethodNode acquire : owner.methods) {
+                Type[] arguments = Type.getArgumentTypes(acquire.desc);
+                Type result = Type.getReturnType(acquire.desc);
+                if (!isStatic(acquire) || !isPublic(acquire) || arguments.length != 1
+                        || arguments[0].getSort() != Type.OBJECT
+                        || !arguments[0].getInternalName().equals(modelType)
+                        || result.getSort() != Type.OBJECT) {
+                    continue;
+                }
+                String providerType = result.getInternalName();
+                ClassNode provider = classes.get(providerType);
+                if (provider == null || (provider.access & Opcodes.ACC_INTERFACE) == 0) {
+                    continue;
+                }
+                List<MethodNode> openMethods = provider.methods.stream()
+                        .filter(method -> !isStatic(method) && isPublic(method)
+                                && Type.getArgumentTypes(method.desc).length == 1
+                                && Type.getArgumentTypes(method.desc)[0].getSort()
+                                == Type.OBJECT
+                                && Type.getArgumentTypes(method.desc)[0].getInternalName()
+                                .equals(trackType)
+                                && Type.getReturnType(method.desc).getSort() == Type.OBJECT
+                                && isAudioStreamContract(classes,
+                                Type.getReturnType(method.desc).getInternalName()))
+                        .toList();
+                if (openMethods.size() != 1) {
+                    continue;
+                }
+                MethodNode open = openMethods.get(0);
+                candidates.add(new ProviderSymbols(
+                        new YsmCompatibilityMap.MethodSymbol(owner.name, acquire.name,
+                                acquire.desc),
+                        new YsmCompatibilityMap.MethodSymbol(provider.name, open.name,
+                                open.desc)));
+            }
+        }
+        List<ProviderSymbols> distinct = candidates.stream().distinct().toList();
+        if (distinct.size() > 1) {
+            throw new IOException("Expected one client audio stream provider, found "
+                    + distinct.size());
+        }
+        return distinct.isEmpty() ? null : distinct.get(0);
+    }
+
+    private static boolean isAudioStreamContract(Map<String, ClassNode> classes,
+            String streamType) {
+        ClassNode stream = classes.get(streamType);
+        return stream != null && (stream.access & Opcodes.ACC_INTERFACE) != 0
+                && !stream.interfaces.isEmpty()
+                && stream.methods.stream().anyMatch(method -> !isStatic(method)
+                        && method.desc.equals("()Z"));
+    }
+
+    private static String clientModelType(Map<String, ClassNode> classes,
+            YsmMethodSymbol lookup) throws IOException {
+        ClassNode manager = requireClass(classes, lookup.owner(), "client model manager");
+        MethodNode lookupMethod = manager.methods.stream()
+                .filter(method -> method.name.equals(lookup.name())
+                        && method.desc.equals(lookup.descriptor()))
+                .findFirst().orElseThrow(() -> new IOException("Missing client model lookup"));
+        List<String> modelTypes = new ArrayList<>();
+        for (AbstractInsnNode instruction : lookupMethod.instructions) {
+            if (instruction instanceof TypeInsnNode type
+                    && type.getOpcode() == Opcodes.CHECKCAST
+                    && classes.containsKey(type.desc) && !modelTypes.contains(type.desc)) {
+                modelTypes.add(type.desc);
+            }
+        }
+        if (modelTypes.size() != 1) {
+            throw new IOException("Client model lookup must cast exactly one model type");
+        }
+        return modelTypes.get(0);
+    }
+
     private static List<AbstractInsnNode> realInstructions(MethodNode method) {
         List<AbstractInsnNode> result = new ArrayList<>();
         for (AbstractInsnNode instruction : method.instructions) {
@@ -664,6 +833,19 @@ public final class JarStructureAnalyzer {
             if (code.get(index) instanceof TypeInsnNode type
                     && type.getOpcode() == Opcodes.CHECKCAST
                     && type.desc.startsWith("net/minecraft/")) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static int nextYsmTypeInstruction(List<AbstractInsnNode> code, int start,
+            int maximumDistance, Map<String, ClassNode> classes) {
+        int end = Math.min(code.size(), start + maximumDistance);
+        for (int index = start; index < end; index++) {
+            if (code.get(index) instanceof TypeInsnNode type
+                    && type.getOpcode() == Opcodes.CHECKCAST
+                    && classes.containsKey(type.desc)) {
                 return index;
             }
         }
@@ -2216,6 +2398,16 @@ public final class JarStructureAnalyzer {
                                      YsmCompatibilityMap.MethodSymbol texturesGetter,
                                      YsmCompatibilityMap.MethodSymbol cacheAcquire,
                                      YsmCompatibilityMap.MethodSymbol locationGetter) {
+    }
+
+    record ClientAudioCacheSymbols(YsmCompatibilityMap.MethodSymbol modelResourcesGetter,
+                                   YsmCompatibilityMap.MethodSymbol soundsGetter,
+                                   YsmCompatibilityMap.MethodSymbol cacheAcquire,
+                                   YsmCompatibilityMap.MethodSymbol streamOpen) {
+    }
+
+    private record ProviderSymbols(YsmCompatibilityMap.MethodSymbol acquire,
+                                   YsmCompatibilityMap.MethodSymbol open) {
     }
 
     record CompleteFeedbackSymbols(YsmCompatibilityMap.FieldSymbol payloadField,
