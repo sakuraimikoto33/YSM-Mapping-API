@@ -48,24 +48,29 @@ public final class StructurePatternResolver {
     private static boolean matchesClass(WholeJarStructureGraph.ClassStructure value,
             YsmStructureConstraints constraints) {
         if (!access(value.access(), constraints) || !matchesOwner(value, constraints)) return false;
-        List<String> members = new ArrayList<>();
-        value.fields().forEach(field -> {
-            members.add(field.fingerprint());
-            members.add(field.descriptorShape());
-        });
-        value.methods().forEach(method -> {
-            members.add(method.fingerprint());
-            members.add(method.descriptorShape());
-        });
-        return members.containsAll(constraints.memberShapes())
-                && value.externalReferences().containsAll(constraints.externalReferences());
+        return value.externalReferences().containsAll(constraints.externalReferences());
     }
 
     private static boolean matchesOwner(WholeJarStructureGraph.ClassStructure owner,
             YsmStructureConstraints constraints) {
         return (constraints.superName().isEmpty()
                 || constraints.superName().equals(owner.superShape()))
-                && owner.interfaceShapes().containsAll(constraints.interfaces());
+                && owner.interfaceShapes().containsAll(constraints.interfaces())
+                && memberShapes(owner).containsAll(constraints.memberShapes());
+    }
+
+    private static List<String> memberShapes(
+            WholeJarStructureGraph.ClassStructure owner) {
+        List<String> members = new ArrayList<>();
+        owner.fields().forEach(field -> {
+            members.add(field.fingerprint());
+            members.add(field.descriptorShape());
+        });
+        owner.methods().forEach(method -> {
+            members.add(method.fingerprint());
+            members.add(method.descriptorShape());
+        });
+        return members;
     }
 
     private static boolean matches(WholeJarStructureGraph.MethodStructure value,
