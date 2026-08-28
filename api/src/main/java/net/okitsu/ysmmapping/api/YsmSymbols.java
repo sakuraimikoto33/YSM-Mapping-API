@@ -152,6 +152,8 @@ public final class YsmSymbols {
             methodKey("ysm.client.renderer.custom_vehicle.render.method");
     public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_MODEL_PREVIEW_RENDER_VEHICLE =
             methodKey("ysm.client.renderer.model_preview.render_vehicle.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_MODEL_PREVIEW_RENDER_PLAYER_OVERLAY =
+            methodKey("ysm.client.renderer.model_preview.render_player_overlay.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CUSTOM_PLAYER_ENTITY_GETTER =
             methodKey("ysm.client.custom_player.entity_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CUSTOM_PLAYER_CURRENT_MODEL_GETTER =
