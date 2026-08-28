@@ -212,6 +212,14 @@ public final class YsmSymbols {
             methodKey("ysm.client.renderer.parrot_layer.render.method");
     public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_BACKPACK_LAYER_RENDER =
             methodKey("ysm.client.renderer.backpack_layer.render.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_CUSTOM_PROJECTILE_RENDER =
+            methodKey("ysm.client.renderer.custom_projectile.render.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_CUSTOM_FISHING_HOOK_RENDER =
+            methodKey("ysm.client.renderer.custom_fishing_hook.render.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_CUSTOM_VEHICLE_RENDER =
+            methodKey("ysm.client.renderer.custom_vehicle.render.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_MODEL_PREVIEW_RENDER_VEHICLE =
+            methodKey("ysm.client.renderer.model_preview.render_vehicle.method");
 
     public static final YsmSymbolKey<YsmMethodSymbol> ANIMATED_MODEL_LEFT_HAND_BONES_GETTER =
             methodKey("ysm.client.animated_model.left_hand_bones_getter.method");
