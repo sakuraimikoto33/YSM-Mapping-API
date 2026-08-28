@@ -15,7 +15,7 @@ class SubEntityRendererSemanticAnalyzerTest {
     void resolvesEveryForgeRendererRoleByStructure() {
         SubEntityRendererSemanticAnalyzer.Analysis result = analyze(false, false, true);
 
-        assertEquals(4, result.symbols().size());
+        assertEquals(5, result.symbols().size());
         assertEquals("projectile-owner", method(result,
                 YsmSymbols.RENDERER_CUSTOM_PROJECTILE_RENDER).owner());
         assertEquals("fishing-owner", method(result,
@@ -24,6 +24,8 @@ class SubEntityRendererSemanticAnalyzerTest {
                 YsmSymbols.RENDERER_CUSTOM_VEHICLE_RENDER).owner());
         assertEquals("preview-owner", method(result,
                 YsmSymbols.RENDERER_MODEL_PREVIEW_RENDER_VEHICLE).owner());
+        assertEquals("preview-owner", method(result,
+                YsmSymbols.RENDERER_MODEL_PREVIEW_RENDER_PLAYER_OVERLAY).owner());
         assertTrue(result.diagnostics().isEmpty());
     }
 
@@ -31,7 +33,7 @@ class SubEntityRendererSemanticAnalyzerTest {
     void resolvesEveryFabricRendererRoleByStructure() {
         SubEntityRendererSemanticAnalyzer.Analysis result = analyze(true, false, true, true);
 
-        assertEquals(4, result.symbols().size());
+        assertEquals(5, result.symbols().size());
         assertTrue(result.diagnostics().isEmpty());
     }
 
@@ -44,7 +46,7 @@ class SubEntityRendererSemanticAnalyzerTest {
         assertTrue(result.diagnostics().get(
                 YsmSymbols.RENDERER_CUSTOM_PROJECTILE_RENDER)
                 .contains("2 structurally valid candidates"));
-        assertEquals(3, result.symbols().size());
+        assertEquals(4, result.symbols().size());
     }
 
     @Test
@@ -53,6 +55,8 @@ class SubEntityRendererSemanticAnalyzerTest {
 
         assertFalse(result.symbols().containsKey(
                 YsmSymbols.RENDERER_MODEL_PREVIEW_RENDER_VEHICLE));
+        assertFalse(result.symbols().containsKey(
+                YsmSymbols.RENDERER_MODEL_PREVIEW_RENDER_PLAYER_OVERLAY));
         assertEquals("No structurally valid candidate", result.diagnostics().get(
                 YsmSymbols.RENDERER_MODEL_PREVIEW_RENDER_VEHICLE));
         assertEquals(3, result.symbols().size());
@@ -76,7 +80,7 @@ class SubEntityRendererSemanticAnalyzerTest {
         SubEntityRendererSemanticAnalyzer.Analysis result =
                 analyze(false, false, true, false, false, "neoforge");
 
-        assertEquals(4, result.symbols().size());
+        assertEquals(5, result.symbols().size());
         assertTrue(result.diagnostics().isEmpty());
     }
 
@@ -114,6 +118,9 @@ class SubEntityRendererSemanticAnalyzerTest {
                 ? "net/minecraft/class_4587"
                 : "com/mojang/blaze3d/vertex/PoseStack";
         String previewShape = "(L" + entityType + ";L" + poseStack + ";F)V";
+        String overlayShape = "neoforge".equals(loader)
+                ? "(L@minecraft;L@minecraft;FFFFIF)V"
+                : "(L@minecraft;L@minecraft;DDFFIF)V";
 
         List<WholeJarStructureGraph.ClassStructure> classes = new ArrayList<>();
         classes.add(owner("projectile-owner", booleanShape, projectileMarker));
@@ -123,10 +130,10 @@ class SubEntityRendererSemanticAnalyzerTest {
         classes.add(owner("fishing-owner", booleanShape, fishingMarker));
         classes.add(owner("vehicle-owner", booleanShape, "(L@minecraft;FF)F"));
         if (includePreview) {
-            classes.add(owner("preview-owner", previewShape, null));
+            classes.add(previewOwner("preview-owner", previewShape, overlayShape));
         }
         if (duplicatePreview) {
-            classes.add(owner("second-preview-owner", previewShape, null));
+            classes.add(previewOwner("second-preview-owner", previewShape, overlayShape));
         }
         if (includeGenericPreviewDecoys) {
             classes.add(owner("preview-decoy-a",
@@ -159,6 +166,19 @@ class SubEntityRendererSemanticAnalyzerTest {
                 name, "anonymous-" + name, "fingerprint-" + name,
                 0, "java/lang/Object", List.of(), "",
                 List.of(), methods, List.of());
+    }
+
+    private static WholeJarStructureGraph.ClassStructure previewOwner(
+            String name, String previewDescriptor, String overlayShape) {
+        return new WholeJarStructureGraph.ClassStructure(
+                name, "anonymous-" + name, "fingerprint-" + name,
+                0, "java/lang/Object", List.of(), "",
+                List.of(), List.of(
+                        method("preview", previewDescriptor,
+                                "(L@minecraft;L@minecraft;F)V", 9),
+                        method("overlay", "(Lexample/Gui;Lexample/Player;DDFFIF)V",
+                                overlayShape, 8)),
+                List.of());
     }
 
     private static WholeJarStructureGraph.MethodStructure method(

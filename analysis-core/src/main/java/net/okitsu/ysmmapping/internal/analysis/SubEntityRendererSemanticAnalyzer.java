@@ -12,8 +12,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-/** Resolves official YSM's obfuscated projectile, hook, and vehicle render helpers. */
+/** Resolves official YSM's obfuscated sub-entity and model-preview render helpers. */
 public final class SubEntityRendererSemanticAnalyzer {
+    private static final int STATIC = 8;
     private static final int PUBLIC_STATIC = 9;
 
     public Analysis analyze(YsmClassIndex classIndex, String loader,
@@ -47,6 +48,12 @@ public final class SubEntityRendererSemanticAnalyzer {
         resolveExactDescriptor(graph,
                 YsmSymbols.RENDERER_MODEL_PREVIEW_RENDER_VEHICLE,
                 previewDescriptor, symbols, diagnostics);
+        resolve(resolver, graph,
+                YsmSymbols.RENDERER_MODEL_PREVIEW_RENDER_PLAYER_OVERLAY,
+                staticMethod("(L@minecraft;L@minecraft;DDFFIF)V",
+                        "(L@minecraft;L@minecraft;FFFFIF)V"),
+                unconstrained(),
+                symbols, diagnostics);
         return new Analysis(symbols, diagnostics);
     }
 
@@ -71,6 +78,19 @@ public final class SubEntityRendererSemanticAnalyzer {
                 .requiredAccess(PUBLIC_STATIC)
                 .descriptorShape(descriptor)
                 .build();
+    }
+
+    private static YsmStructureConstraints staticMethod(String... descriptors) {
+        YsmStructureConstraints.Builder builder = YsmStructureConstraints.builder()
+                .requiredAccess(STATIC);
+        for (String descriptor : descriptors) {
+            builder.descriptorShape(descriptor);
+        }
+        return builder.build();
+    }
+
+    private static YsmStructureConstraints unconstrained() {
+        return YsmStructureConstraints.builder().build();
     }
 
     private static YsmStructureConstraints owner(String memberShape) {
