@@ -422,6 +422,11 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.client.renderer.model_preview.render_player_overlay.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.client.renderer.model_preview.render_vehicle.method",
       "kind": "METHOD",
       "definitionRevision": 1
