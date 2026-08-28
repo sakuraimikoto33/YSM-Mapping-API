@@ -392,6 +392,21 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.client.renderer.custom_fishing_hook.render.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.renderer.custom_projectile.render.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.renderer.custom_vehicle.render.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.client.renderer.elytra_layer.render_elytra.method",
       "kind": "METHOD",
       "definitionRevision": 1
@@ -403,6 +418,11 @@
     },
     {
       "id": "ysm.client.renderer.item_in_hand_layer.render.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.client.renderer.model_preview.render_vehicle.method",
       "kind": "METHOD",
       "definitionRevision": 1
     },

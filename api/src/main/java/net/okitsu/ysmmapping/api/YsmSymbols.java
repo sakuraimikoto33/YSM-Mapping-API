@@ -144,6 +144,14 @@ public final class YsmSymbols {
             methodKey("ysm.client.equipment.elytra_item_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_ELYTRA_LAYER_RENDER =
             methodKey("ysm.client.renderer.elytra_layer.render.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_CUSTOM_PROJECTILE_RENDER =
+            methodKey("ysm.client.renderer.custom_projectile.render.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_CUSTOM_FISHING_HOOK_RENDER =
+            methodKey("ysm.client.renderer.custom_fishing_hook.render.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_CUSTOM_VEHICLE_RENDER =
+            methodKey("ysm.client.renderer.custom_vehicle.render.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> RENDERER_MODEL_PREVIEW_RENDER_VEHICLE =
+            methodKey("ysm.client.renderer.model_preview.render_vehicle.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CUSTOM_PLAYER_ENTITY_GETTER =
             methodKey("ysm.client.custom_player.entity_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CUSTOM_PLAYER_CURRENT_MODEL_GETTER =

@@ -13,10 +13,18 @@ class YsmSymbolKeyTest {
     @Test
     void exposesOnlyTheApprovedSemanticRegistry() {
         var symbols = YsmSymbols.all();
-        assertEquals(113, symbols.size());
+        assertEquals(117, symbols.size());
         assertEquals(18, symbols.stream().filter(key -> key.kind() == SymbolKind.CLASS).count());
-        assertEquals(84, symbols.stream().filter(key -> key.kind() == SymbolKind.METHOD).count());
+        assertEquals(88, symbols.stream().filter(key -> key.kind() == SymbolKind.METHOD).count());
         assertEquals(11, symbols.stream().filter(key -> key.kind() == SymbolKind.FIELD).count());
+        assertEquals(YsmSymbols.RENDERER_CUSTOM_PROJECTILE_RENDER,
+                YsmSymbols.byId("ysm.client.renderer.custom_projectile.render.method").orElseThrow());
+        assertEquals(YsmSymbols.RENDERER_CUSTOM_FISHING_HOOK_RENDER,
+                YsmSymbols.byId("ysm.client.renderer.custom_fishing_hook.render.method").orElseThrow());
+        assertEquals(YsmSymbols.RENDERER_CUSTOM_VEHICLE_RENDER,
+                YsmSymbols.byId("ysm.client.renderer.custom_vehicle.render.method").orElseThrow());
+        assertEquals(YsmSymbols.RENDERER_MODEL_PREVIEW_RENDER_VEHICLE,
+                YsmSymbols.byId("ysm.client.renderer.model_preview.render_vehicle.method").orElseThrow());
         assertTrue(symbols.stream().allMatch(key -> key.id().startsWith("ysm.")
                 && key.id().endsWith("." + key.kind().name().toLowerCase())));
         assertTrue(symbols.stream().allMatch(key -> key.origin() == SymbolOrigin.CURATED));
