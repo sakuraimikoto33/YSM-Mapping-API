@@ -232,6 +232,7 @@ public final class JarStructureAnalyzer {
             Map<YsmSymbolKey<?>, String> diagnostics = new LinkedHashMap<>();
             recoverClientTextureCache(byName, values, diagnostics);
             recoverClientAudioCache(byName, values, diagnostics);
+            recoverSubEntityRenderers(index, artifact.loader(), values, diagnostics);
             return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
         } catch (StructuralAnalysisException ignored) {
             // Recover independent groups below; an individual failure is recorded per key.
@@ -292,6 +293,7 @@ public final class JarStructureAnalyzer {
             fail(diagnostics, exception, YsmSymbols.CLIENT_NOT_DISPLAY_MODELS);
         }
         recoverAnimationRoulette(classes, artifact.loader(), values, diagnostics);
+        recoverSubEntityRenderers(index, artifact.loader(), values, diagnostics);
         try {
             ServerSyncResultSymbols result = findServerSyncResultSymbols(classes);
             putMethod(values, diagnostics, YsmSymbols.SERVER_SYNC_RESULT_SUCCESS_GETTER,
@@ -303,6 +305,16 @@ public final class JarStructureAnalyzer {
                     YsmSymbols.SERVER_SYNC_RESULT_ERROR_GETTER);
         }
         return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
+    }
+
+    private void recoverSubEntityRenderers(YsmClassIndex index, String loader,
+            Map<YsmSymbolKey<?>, YsmResolvedSymbol> values,
+            Map<YsmSymbolKey<?>, String> diagnostics) {
+        SubEntityRendererSemanticAnalyzer.Analysis analysis =
+                new SubEntityRendererSemanticAnalyzer().analyze(
+                        index, loader, profile.loader(loader));
+        values.putAll(analysis.symbols());
+        diagnostics.putAll(analysis.diagnostics());
     }
 
     private void validateTarget(YsmArtifact artifact) {
