@@ -4,6 +4,7 @@
   "version": "${version}",
   "name": "YSM Mapping API",
   "description": "Runtime structural mappings for Yes Steve Model consumers.",
+  "icon": "ysm_mapping_api.png",
   "environment": "*",
   "entrypoints": {
     "preLaunch": [

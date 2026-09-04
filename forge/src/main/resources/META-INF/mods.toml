@@ -6,6 +6,7 @@ license="Not specified"
 modId="ysm_mapping_api"
 version="${version}"
 displayName="YSM Mapping API"
+logoFile="ysm_mapping_api.png"
 description='''Runtime structural mappings for Yes Steve Model consumers.'''
 
 [[dependencies.ysm_mapping_api]]
