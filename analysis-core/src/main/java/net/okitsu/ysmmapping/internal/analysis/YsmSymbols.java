@@ -86,6 +86,10 @@ public final class YsmSymbols {
     public static final YsmSymbolKey<YsmMethodSymbol>
             ANIMATION_ROULETTE_CONFIGURATION_EXPRESSION =
             methodKey("ysm.client.animation_roulette.configuration_expression.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> MOLANG_GROUND_SPEED2_QUERY =
+            methodKey("ysm.molang.ground_speed2.query.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> MOLANG_QUERY_CONTEXT_GET =
+            methodKey("ysm.molang.query.context_get.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_CATALOG_DELTA_CALLBACK =
             methodKey("ysm.client.model_manager.catalog_delta_callback.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_PACK_MAP_GETTER =
@@ -260,6 +264,11 @@ public final class YsmSymbols {
             RENDER_UTILS_TRANSLATE_AND_ROTATE_MATRIX_FOR_BONE =
             methodKey("ysm.client.render_utils.translate_and_rotate_matrix_for_bone.method");
 
+    // A Minecraft-owned profile opts into an additional surface by listing its whole group.
+    // Existing profiles must keep requiring every symbol outside these explicit groups.
+    private static final List<Set<String>> OPTIONAL_PROFILE_SYMBOL_GROUPS = List.of(Set.of(
+            MOLANG_GROUND_SPEED2_QUERY.id(), MOLANG_QUERY_CONTEXT_GET.id()));
+
     private static final List<Integer> PACKET_IDS = List.of(
             1, 2, 3, 4, 5, 7, 15, 16, 17, 18, 19, 21, 22, 23, 51, 52);
 
@@ -288,6 +297,10 @@ public final class YsmSymbols {
 
     public static Collection<YsmSymbolKey<?>> all() {
         return REGISTRY.all();
+    }
+
+    static List<Set<String>> optionalProfileSymbolGroups() {
+        return OPTIONAL_PROFILE_SYMBOL_GROUPS;
     }
 
     static String analysisGroup(String id) {

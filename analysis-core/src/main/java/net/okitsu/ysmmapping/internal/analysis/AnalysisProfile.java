@@ -98,13 +98,24 @@ public final class AnalysisProfile {
         }
         Set<String> builtIns = YsmSymbols.all().stream().map(YsmSymbolKey::id)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        if (!definitionValues.keySet().equals(builtIns)) {
-            Set<String> missing = new java.util.TreeSet<>(builtIns);
-            missing.removeAll(definitionValues.keySet());
-            Set<String> extra = new java.util.TreeSet<>(definitionValues.keySet());
-            extra.removeAll(builtIns);
+        Set<String> required = new java.util.TreeSet<>(builtIns);
+        YsmSymbols.optionalProfileSymbolGroups().forEach(required::removeAll);
+        Set<String> missing = new java.util.TreeSet<>(required);
+        missing.removeAll(definitionValues.keySet());
+        Set<String> extra = new java.util.TreeSet<>(definitionValues.keySet());
+        extra.removeAll(builtIns);
+        if (!missing.isEmpty() || !extra.isEmpty()) {
             throw new IllegalArgumentException("Profile symbol mismatch: missing=" + missing
                     + ", extra=" + extra);
+        }
+        for (Set<String> group : YsmSymbols.optionalProfileSymbolGroups()) {
+            if (!Collections.disjoint(definitionValues.keySet(), group)
+                    && !definitionValues.keySet().containsAll(group)) {
+                Set<String> absent = new java.util.TreeSet<>(group);
+                absent.removeAll(definitionValues.keySet());
+                throw new IllegalArgumentException("Incomplete optional profile symbol group: "
+                        + "missing=" + absent);
+            }
         }
         definitions = Collections.unmodifiableMap(definitionValues);
         this.profileSha256 = profileSha256;
