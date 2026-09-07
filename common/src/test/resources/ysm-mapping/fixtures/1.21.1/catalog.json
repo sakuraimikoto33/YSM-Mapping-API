@@ -64,7 +64,7 @@
     }
   ],
   "expectations": {
-    "registryTotal": 118,
+    "registryTotal": 120,
     "equipmentDirectRequiredLoaders": [
       "neoforge"
     ],

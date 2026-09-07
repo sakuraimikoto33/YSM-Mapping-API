@@ -557,6 +557,16 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.molang.ground_speed2.query.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.molang.query.context_get.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.network.registration.class",
       "kind": "CLASS",
       "definitionRevision": 1
