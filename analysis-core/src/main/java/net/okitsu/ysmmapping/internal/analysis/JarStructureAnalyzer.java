@@ -233,6 +233,7 @@ public final class JarStructureAnalyzer {
             recoverClientTextureCache(byName, values, diagnostics);
             recoverClientAudioCache(byName, values, diagnostics);
             recoverSubEntityRenderers(index, artifact.loader(), values, diagnostics);
+            recoverMolangQueries(index, values, diagnostics);
             return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
         } catch (StructuralAnalysisException ignored) {
             // Recover independent groups below; an individual failure is recorded per key.
@@ -294,6 +295,7 @@ public final class JarStructureAnalyzer {
         }
         recoverAnimationRoulette(classes, artifact.loader(), values, diagnostics);
         recoverSubEntityRenderers(index, artifact.loader(), values, diagnostics);
+        recoverMolangQueries(index, values, diagnostics);
         try {
             ServerSyncResultSymbols result = findServerSyncResultSymbols(classes);
             putMethod(values, diagnostics, YsmSymbols.SERVER_SYNC_RESULT_SUCCESS_GETTER,
@@ -305,6 +307,18 @@ public final class JarStructureAnalyzer {
                     YsmSymbols.SERVER_SYNC_RESULT_ERROR_GETTER);
         }
         return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
+    }
+
+    private void recoverMolangQueries(YsmClassIndex index,
+            Map<YsmSymbolKey<?>, YsmResolvedSymbol> values,
+            Map<YsmSymbolKey<?>, String> diagnostics) {
+        if (!profile.definitions().containsKey(YsmSymbols.MOLANG_GROUND_SPEED2_QUERY.id())) {
+            return;
+        }
+        MolangQuerySemanticAnalyzer.Analysis analysis =
+                new MolangQuerySemanticAnalyzer().analyze(index);
+        values.putAll(analysis.symbols());
+        diagnostics.putAll(analysis.diagnostics());
     }
 
     private void recoverSubEntityRenderers(YsmClassIndex index, String loader,

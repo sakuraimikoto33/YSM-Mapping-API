@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.okitsu.ysmmapping.api.SymbolKind;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -18,9 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnalysisProfileTest {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final List<YsmSymbolKey<?>> MOLANG_QUERY_GROUP = List.of(
+            YsmSymbols.MOLANG_GROUND_SPEED2_QUERY, YsmSymbols.MOLANG_QUERY_CONTEXT_GET);
 
     @TempDir
     Path temporary;
@@ -59,6 +63,97 @@ class AnalysisProfileTest {
         assertNotEquals(first.profileSha256(), changed.profileSha256());
         assertNotEquals(first.registryDefinitionSha256(),
                 changed.registryDefinitionSha256());
+    }
+
+    @Test
+    void legacyProfileKeepsItsExactRegistryAndDigests() throws Exception {
+        AnalysisProfile legacy = AnalysisProfile.load(
+                write("legacy-registry.json", profile("test-mc", false, true)));
+
+        assertEquals(120, YsmSymbols.all().size());
+        assertEquals(118, legacy.definitions().size());
+        assertTrue(MOLANG_QUERY_GROUP.stream().allMatch(key -> key.kind() == SymbolKind.METHOD));
+        assertTrue(MOLANG_QUERY_GROUP.stream().allMatch(key -> YsmSymbols.byId(key.id())
+                .orElseThrow().equals(key)));
+        assertTrue(MOLANG_QUERY_GROUP.stream().noneMatch(key -> legacy.definitions()
+                .containsKey(key.id())));
+        legacy.requireExactSymbols(legacyKeys().stream().map(YsmSymbolKey::id).toList());
+        assertThrows(IllegalStateException.class, () -> legacy.requireExactSymbols(
+                YsmSymbols.all().stream().map(YsmSymbolKey::id).toList()));
+        // Golden values from the original 118-symbol profile, before the optional group existed.
+        assertEquals("e85daad1745def57bbb19edbc89f78589bb618f460dec2be67c46cdf38d6047a",
+                legacy.profileSha256());
+        assertEquals("51bad69483d52d6fb82d42c7fa5025ef4ca1d34cbc79a1d14e10d4a3e3c9c94d",
+                legacy.registryDefinitionSha256());
+    }
+
+    @Test
+    void completeOptionalGroupOptsInWithoutChangingExistingDefinitions() throws Exception {
+        AnalysisProfile legacy = AnalysisProfile.load(
+                write("legacy.json", profile("test-mc", false, true)));
+        JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
+                .getAsJsonObject();
+        MOLANG_QUERY_GROUP.forEach(key -> addSymbol(value, key));
+
+        AnalysisProfile extended = AnalysisProfile.load(
+                write("extended.json", GSON.toJson(value)));
+
+        assertEquals(120, extended.definitions().size());
+        extended.requireExactSymbols(YsmSymbols.all().stream().map(YsmSymbolKey::id).toList());
+        assertThrows(IllegalStateException.class, () -> extended.requireExactSymbols(
+                legacyKeys().stream().map(YsmSymbolKey::id).toList()));
+        for (YsmSymbolKey<?> key : MOLANG_QUERY_GROUP) {
+            AnalysisProfile.Definition definition = extended.definitions().get(key.id());
+            assertEquals(SymbolKind.METHOD, definition.kind());
+            assertEquals(1, definition.definitionRevision());
+        }
+        legacy.definitions().forEach((id, definition) ->
+                assertEquals(definition, extended.definitions().get(id)));
+        assertNotEquals(legacy.profileSha256(), extended.profileSha256());
+        assertNotEquals(legacy.registryDefinitionSha256(), extended.registryDefinitionSha256());
+        assertEquals(legacy.fingerprintDefinitionSha256(), extended.fingerprintDefinitionSha256());
+    }
+
+    @Test
+    void eitherIncompleteOptionalGroupFailsClosed() throws Exception {
+        for (int index = 0; index < MOLANG_QUERY_GROUP.size(); index++) {
+            JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
+                    .getAsJsonObject();
+            addSymbol(value, MOLANG_QUERY_GROUP.get(index));
+            Path path = write("partial-" + index + ".json", GSON.toJson(value));
+
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> AnalysisProfile.load(path));
+
+            assertTrue(failure.getMessage().contains("Incomplete optional profile symbol group"));
+        }
+    }
+
+    @Test
+    void optionalGroupDoesNotReplaceMissingRequiredSymbols() throws Exception {
+        JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
+                .getAsJsonObject();
+        value.getAsJsonArray("symbols").remove(0);
+        MOLANG_QUERY_GROUP.forEach(key -> addSymbol(value, key));
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> AnalysisProfile.load(write("missing-required.json", GSON.toJson(value))));
+
+        assertTrue(failure.getMessage().contains("Profile symbol mismatch"));
+    }
+
+    @Test
+    void unknownSymbolFailsClosedEvenWithCompleteOptionalGroup() throws Exception {
+        JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
+                .getAsJsonObject();
+        MOLANG_QUERY_GROUP.forEach(key -> addSymbol(value, key));
+        value.getAsJsonArray("symbols").add(GSON.toJsonTree(Map.of(
+                "id", "ysm.molang.unapproved.method",
+                "kind", "METHOD",
+                "definitionRevision", 1)));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> AnalysisProfile.load(write("unknown.json", GSON.toJson(value))));
     }
 
     @Test
@@ -106,7 +201,7 @@ class AnalysisProfileTest {
     private static String profile(String minecraftVersion, boolean reverseTopLevel,
             boolean includeAll) {
         List<Map<String, Object>> symbols = new ArrayList<>();
-        List<YsmSymbolKey<?>> keys = new ArrayList<>(YsmSymbols.all());
+        List<YsmSymbolKey<?>> keys = new ArrayList<>(legacyKeys());
         if (!includeAll) keys.remove(keys.size() - 1);
         for (YsmSymbolKey<?> key : keys) {
             symbols.add(Map.of(
@@ -144,6 +239,17 @@ class AnalysisProfileTest {
             value = reversed;
         }
         return GSON.toJson(value);
+    }
+
+    private static List<YsmSymbolKey<?>> legacyKeys() {
+        return YsmSymbols.all().stream().filter(key -> !MOLANG_QUERY_GROUP.contains(key)).toList();
+    }
+
+    private static void addSymbol(JsonObject profile, YsmSymbolKey<?> key) {
+        profile.getAsJsonArray("symbols").add(GSON.toJsonTree(Map.of(
+                "id", key.id(),
+                "kind", key.kind().name(),
+                "definitionRevision", 1)));
     }
 
 }
