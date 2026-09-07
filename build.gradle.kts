@@ -1,3 +1,4 @@
+import groovy.json.JsonSlurper
 import java.util.zip.ZipFile
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
@@ -54,9 +55,22 @@ val verifyDistributions = tasks.register("verifyDistributions") {
                 val names = zip.entries().asSequence()
                     .map { it.name }
                     .toList()
+                val packMetadata = zip.getEntry("pack.mcmeta")
+                    ?: error("pack.mcmeta missing from ${jar.name}")
+                val packText = zip.getInputStream(packMetadata).bufferedReader().use {
+                    it.readText()
+                }
+                @Suppress("UNCHECKED_CAST")
+                val pack = (JsonSlurper().parseText(packText) as Map<String, Any?>)["pack"]
+                    as? Map<String, Any?>
+                    ?: error("pack.mcmeta lacks a pack object in ${jar.name}")
+                require((pack["pack_format"] as? Number)?.toInt() == 34) {
+                    "pack.mcmeta must use resource pack format 34 in ${jar.name}"
+                }
                 val requiredClasses = listOf(
                     "net/okitsu/ysmmapping/api/MappingTarget.class",
                     "net/okitsu/ysmmapping/api/MappingEntry.class",
+                    "net/okitsu/ysmmapping/api/mixin/YsmRuntimeMappings.class",
                     "net/okitsu/ysmmapping/internal/analysis/AnalysisProfile.class",
                     "net/okitsu/ysmmapping/internal/cache/MappingEngine.class"
                 )
@@ -75,6 +89,22 @@ val verifyDistributions = tasks.register("verifyDistributions") {
                 }
                 require(names.none { it.startsWith("ysm_mapping_api/reference/") }) {
                     "Version-specific YSM reference data found in ${jar.name}"
+                }
+                require(names.none {
+                    it.startsWith("net/minecraftforge/") ||
+                        it.startsWith("net/okitsu/ysmmapping/forge/") ||
+                        it == "META-INF/mods.toml"
+                }) {
+                    "Forge content found in ${jar.name}"
+                }
+                for (entry in zip.entries().asSequence().filter { it.name.endsWith(".class") }) {
+                    val header = zip.getInputStream(entry).use { it.readNBytes(8) }
+                    require(header.size == 8) { "Truncated class in ${jar.name}: ${entry.name}" }
+                    val major = ((header[6].toInt() and 0xff) shl 8) or
+                        (header[7].toInt() and 0xff)
+                    require(major <= 65) {
+                        "Java $major classfile exceeds Java 21 in ${jar.name}: ${entry.name}"
+                    }
                 }
             }
         }
