@@ -45,6 +45,12 @@ public final class YsmSymbols {
     public static final YsmSymbolKey<YsmMethodSymbol>
             ANIMATION_ROULETTE_CONFIGURATION_EXPRESSION =
             methodKey("ysm.client.animation_roulette.configuration_expression.method");
+    /** Final official ysm.ground_speed2 function: static, one query-input interface, float result. */
+    public static final YsmSymbolKey<YsmMethodSymbol> MOLANG_GROUND_SPEED2_QUERY =
+            methodKey("ysm.molang.ground_speed2.query.method");
+    /** The query input's no-argument accessor for an existing official entity context. */
+    public static final YsmSymbolKey<YsmMethodSymbol> MOLANG_QUERY_CONTEXT_GET =
+            methodKey("ysm.molang.query.context_get.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_MODEL_CATALOG_DELTA_CALLBACK =
             methodKey("ysm.client.model_manager.catalog_delta_callback.method");
     public static final YsmSymbolKey<YsmMethodSymbol> CLIENT_PACK_MAP_GETTER =
