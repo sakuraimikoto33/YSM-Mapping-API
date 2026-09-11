@@ -25,6 +25,8 @@ class AnalysisProfileTest {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final List<YsmSymbolKey<?>> MOLANG_QUERY_GROUP = List.of(
             YsmSymbols.MOLANG_GROUND_SPEED2_QUERY, YsmSymbols.MOLANG_QUERY_CONTEXT_GET);
+    private static final List<YsmSymbolKey<?>> PLAYER_MODEL_SELECTION_GROUP = List.of(
+            YsmSymbols.PLAYER_STATE_MODEL_ID_GETTER, YsmSymbols.PLAYER_STATE_MODEL_DISABLED_GETTER);
 
     @TempDir
     Path temporary;
@@ -70,7 +72,7 @@ class AnalysisProfileTest {
         AnalysisProfile legacy = AnalysisProfile.load(
                 write("legacy-registry.json", profile("test-mc", false, true)));
 
-        assertEquals(121, YsmSymbols.all().size());
+        assertEquals(123, YsmSymbols.all().size());
         assertEquals(118, legacy.definitions().size());
         assertTrue(MOLANG_QUERY_GROUP.stream().allMatch(key -> key.kind() == SymbolKind.METHOD));
         assertTrue(MOLANG_QUERY_GROUP.stream().allMatch(key -> YsmSymbols.byId(key.id())
@@ -101,6 +103,7 @@ class AnalysisProfileTest {
         assertEquals(120, extended.definitions().size());
         extended.requireExactSymbols(YsmSymbols.all().stream()
                 .filter(key -> !key.equals(YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER))
+                .filter(key -> !PLAYER_MODEL_SELECTION_GROUP.contains(key))
                 .map(YsmSymbolKey::id).toList());
         assertThrows(IllegalStateException.class, () -> extended.requireExactSymbols(
                 legacyKeys().stream().map(YsmSymbolKey::id).toList()));
@@ -126,13 +129,53 @@ class AnalysisProfileTest {
         AnalysisProfile after = AnalysisProfile.load(write("with-binder.json", GSON.toJson(value)));
 
         assertEquals(121, after.definitions().size());
-        after.requireExactSymbols(YsmSymbols.all().stream().map(YsmSymbolKey::id).toList());
+        after.requireExactSymbols(YsmSymbols.all().stream()
+                .filter(key -> !PLAYER_MODEL_SELECTION_GROUP.contains(key))
+                .map(YsmSymbolKey::id).toList());
         before.definitions().forEach((id, definition) ->
                 assertEquals(definition, after.definitions().get(id)));
         assertNotEquals(before.registryDefinitionSha256(), after.registryDefinitionSha256());
         assertEquals(before.fingerprintDefinitionSha256(), after.fingerprintDefinitionSha256());
         assertEquals(1, after.definitions().get(
                 YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER.id()).definitionRevision());
+    }
+
+    @Test
+    void playerModelSelectionOptsInAsACompletePairWithoutChangingExistingDefinitions() throws Exception {
+        JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
+                .getAsJsonObject();
+        MOLANG_QUERY_GROUP.forEach(key -> addSymbol(value, key));
+        addSymbol(value, YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER);
+        AnalysisProfile before = AnalysisProfile.load(write("before-selection.json", GSON.toJson(value)));
+        PLAYER_MODEL_SELECTION_GROUP.forEach(key -> addSymbol(value, key));
+        AnalysisProfile after = AnalysisProfile.load(write("with-selection.json", GSON.toJson(value)));
+
+        assertEquals(121, before.definitions().size());
+        assertEquals(123, after.definitions().size());
+        after.requireExactSymbols(YsmSymbols.all().stream().map(YsmSymbolKey::id).toList());
+        before.definitions().forEach((id, definition) ->
+                assertEquals(definition, after.definitions().get(id)));
+        assertNotEquals(before.registryDefinitionSha256(), after.registryDefinitionSha256());
+        assertEquals(before.fingerprintDefinitionSha256(), after.fingerprintDefinitionSha256());
+        PLAYER_MODEL_SELECTION_GROUP.forEach(key -> {
+            assertEquals(SymbolKind.METHOD, after.definitions().get(key.id()).kind());
+            assertEquals(1, after.definitions().get(key.id()).definitionRevision());
+        });
+    }
+
+    @Test
+    void incompletePlayerModelSelectionPairFailsClosed() throws Exception {
+        for (int index = 0; index < PLAYER_MODEL_SELECTION_GROUP.size(); index++) {
+            JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
+                    .getAsJsonObject();
+            addSymbol(value, PLAYER_MODEL_SELECTION_GROUP.get(index));
+            Path path = write("partial-selection-" + index + ".json", GSON.toJson(value));
+
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> AnalysisProfile.load(path));
+
+            assertTrue(failure.getMessage().contains("Incomplete optional profile symbol group"));
+        }
     }
 
     @Test
@@ -264,7 +307,8 @@ class AnalysisProfileTest {
 
     private static List<YsmSymbolKey<?>> legacyKeys() {
         return YsmSymbols.all().stream().filter(key -> !MOLANG_QUERY_GROUP.contains(key)
-                && !key.equals(YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER)).toList();
+                && !key.equals(YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER)
+                && !PLAYER_MODEL_SELECTION_GROUP.contains(key)).toList();
     }
 
     private static void addSymbol(JsonObject profile, YsmSymbolKey<?> key) {
