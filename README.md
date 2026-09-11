@@ -70,6 +70,8 @@ Mixinでsymbolを使用する場合は、Mixin configへpluginとruntime refmap 
 
 公式YSMのクライアントモデルから共有テクスチャを取得するconsumer向けに、モデルデータ取得、テクスチャ一覧取得、動的テクスチャlease取得、ResourceLocation取得のcurated method keyも`YsmSymbols`から提供します。これらもruntime名をconsumerへ保持せず、ReflectionまたはMethodHandleから利用します。
 
+`ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER`は、公式animation contextへlive roaming providerを結び付けるpublic instance methodを表します。引数は公開provider interfaceの1個、戻り値は`void`です。consumerのMixinは`ysm.animation_context.roaming_provider_binder.method`へsource aliasを宣言し、評価用providerのbinding境界を利用できます。これはnetwork受信時のroaming値適用とは別の処理です。
+
 ```json
 {
   "package": "net.example.mixin",

@@ -20,6 +20,33 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class YsmRuntimeRemapperTest {
     @Test
+    void remapsRoamingBinderObjectAliasWithoutChangingObjectDescriptors() throws Exception {
+        String aliasOwner = "net.example.ysmref.AnimationContextAlias";
+        String aliasDescriptor = "(Ljava/lang/Object;)V";
+        String targetOwner = "example/AnimationContext";
+        String targetDescriptor = "(Lexample/RoamingProvider;)V";
+        var key = YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER;
+        MappingSnapshot snapshot = new MappingSnapshot(new MappingTarget("1.20.1", "fabric",
+                "future", "b".repeat(128)), Map.of(key.id(), new MappingEntry(
+                key, ResolutionStatus.STRUCTURAL, 1.0,
+                new YsmMethodSymbol(targetOwner, "bindProvider", targetDescriptor),
+                List.of(), null)));
+        RequestManifest manifest = new RequestManifest(Map.of(key, true), Map.of(
+                key.id(), YsmSourceAlias.methodAlias(aliasOwner,
+                        "bindRoamingProvider", aliasDescriptor)), Map.of(), Map.of());
+        YsmRuntimeRemapper remapper = new YsmRuntimeRemapper(snapshot, "fabric",
+                ResolutionPolicy.SAFE_ONLY, Map.of("example_consumer", manifest));
+
+        assertEquals(targetOwner, remapper.map(aliasOwner.replace('.', '/')));
+        assertEquals("bindProvider" + targetDescriptor,
+                remapper.mapReference("bindRoamingProvider" + aliasDescriptor));
+        assertEquals("bindProvider", remapper.mapMethodName(aliasOwner.replace('.', '/'),
+                "bindRoamingProvider", aliasDescriptor));
+        assertEquals("java/lang/Object", remapper.map("java/lang/Object"));
+        assertEquals(aliasDescriptor, remapper.mapDesc(aliasDescriptor));
+    }
+
+    @Test
     void remapsConsumerOwnedOwnersMethodsAndVirtualDescriptorTypes() throws Exception {
         String aliasOwner = "net.okitsu.serverlessysm.ysmref.ServerModelManager";
         String aliasDescriptor = "(Lnet/okitsu/serverlessysm/ysmref/YsmConnection;"

@@ -152,6 +152,11 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.animation_context.roaming_provider_binder.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.client.animated_model.all_head_bone_getter.method",
       "kind": "METHOD",
       "definitionRevision": 1

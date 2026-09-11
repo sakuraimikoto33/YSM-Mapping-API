@@ -145,6 +145,9 @@ public final class YsmSymbols {
             methodKey("ysm.player_state.roaming_name_hasher.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_FULL_ROAMING_INITIALIZER =
             methodKey("ysm.player_state.full_roaming_initializer.method");
+    /** Binds the live roaming provider to an official animation evaluation context. */
+    public static final YsmSymbolKey<YsmMethodSymbol> ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER =
+            methodKey("ysm.animation_context.roaming_provider_binder.method");
 
     public static final YsmSymbolKey<YsmMethodSymbol> EQUIPMENT_ELYTRA_ITEM_GETTER =
             methodKey("ysm.client.equipment.elytra_item_getter.method");
