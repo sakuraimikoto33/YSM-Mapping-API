@@ -166,6 +166,10 @@ public final class YsmSymbols {
             fieldKey("ysm.player_state.decoded_roaming.field");
     public static final YsmSymbolKey<YsmClassSymbol> PLAYER_STATE_CAPABILITY_CLASS =
             classKey("ysm.player_state.capability.class");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_MODEL_ID_GETTER =
+            methodKey("ysm.player_state.model_id_getter.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_MODEL_DISABLED_GETTER =
+            methodKey("ysm.player_state.model_disabled_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ACTIVE_ANIMATION_GETTER =
             methodKey("ysm.player_state.active_animation_getter.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_ANIMATION_PLAYING_GETTER =
@@ -270,7 +274,8 @@ public final class YsmSymbols {
     // Existing profiles must keep requiring every symbol outside these explicit groups.
     private static final List<Set<String>> OPTIONAL_PROFILE_SYMBOL_GROUPS = List.of(
             Set.of(MOLANG_GROUND_SPEED2_QUERY.id(), MOLANG_QUERY_CONTEXT_GET.id()),
-            Set.of(ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER.id()));
+            Set.of(ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER.id()),
+            Set.of(PLAYER_STATE_MODEL_ID_GETTER.id(), PLAYER_STATE_MODEL_DISABLED_GETTER.id()));
 
     private static final List<Integer> PACKET_IDS = List.of(
             1, 2, 3, 4, 5, 7, 15, 16, 17, 18, 19, 21, 22, 23, 51, 52);

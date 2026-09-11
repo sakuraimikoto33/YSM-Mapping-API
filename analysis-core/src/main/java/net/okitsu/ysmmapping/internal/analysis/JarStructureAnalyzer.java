@@ -235,6 +235,7 @@ public final class JarStructureAnalyzer {
             recoverSubEntityRenderers(index, artifact.loader(), values, diagnostics);
             recoverMolangQueries(index, values, diagnostics);
             recoverAnimationContextRoamingProvider(byName, values, diagnostics);
+            recoverPlayerModelSelection(byName, values, diagnostics);
             return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
         } catch (StructuralAnalysisException ignored) {
             // Recover independent groups below; an individual failure is recorded per key.
@@ -298,6 +299,7 @@ public final class JarStructureAnalyzer {
         recoverSubEntityRenderers(index, artifact.loader(), values, diagnostics);
         recoverMolangQueries(index, values, diagnostics);
         recoverAnimationContextRoamingProvider(byName, values, diagnostics);
+        recoverPlayerModelSelection(byName, values, diagnostics);
         try {
             ServerSyncResultSymbols result = findServerSyncResultSymbols(classes);
             putMethod(values, diagnostics, YsmSymbols.SERVER_SYNC_RESULT_SUCCESS_GETTER,
@@ -309,6 +311,177 @@ public final class JarStructureAnalyzer {
                     YsmSymbols.SERVER_SYNC_RESULT_ERROR_GETTER);
         }
         return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
+    }
+
+    private void recoverPlayerModelSelection(Map<String, ClassNode> classes,
+            Map<YsmSymbolKey<?>, YsmResolvedSymbol> values,
+            Map<YsmSymbolKey<?>, String> diagnostics) {
+        if (!profile.definitions().containsKey(YsmSymbols.PLAYER_STATE_MODEL_ID_GETTER.id())) {
+            return;
+        }
+        try {
+            if (!(values.get(YsmSymbols.PLAYER_STATE_CAPABILITY_CLASS)
+                    instanceof YsmClassSymbol capability)
+                    || !(values.get(YsmSymbols.packetClass(4)) instanceof YsmClassSymbol packet)
+                    || !(values.get(YsmSymbols.CLIENT_MODEL_LOOKUP)
+                    instanceof YsmMethodSymbol lookup)) {
+                throw new IOException("Client player model selection anchors are unavailable");
+            }
+            PlayerModelSelectionSymbols selection = findPlayerModelSelectionSymbols(
+                    classes, capability, packet, lookup);
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_MODEL_ID_GETTER,
+                    selection.modelIdGetter());
+            putMethod(values, diagnostics, YsmSymbols.PLAYER_STATE_MODEL_DISABLED_GETTER,
+                    selection.modelDisabledGetter());
+        } catch (IOException | RuntimeException exception) {
+            fail(diagnostics, exception, YsmSymbols.PLAYER_STATE_MODEL_ID_GETTER,
+                    YsmSymbols.PLAYER_STATE_MODEL_DISABLED_GETTER);
+        }
+    }
+
+    static PlayerModelSelectionSymbols findPlayerModelSelectionSymbols(
+            Map<String, ClassNode> classes, YsmClassSymbol capabilitySymbol,
+            YsmClassSymbol packetSymbol, YsmMethodSymbol modelLookup) throws IOException {
+        ClassNode capability = requireClass(classes, capabilitySymbol.internalName(),
+                "client player state capability");
+        ClassNode packet = requireClass(classes, packetSymbol.internalName(),
+                "client model selection packet");
+        Set<String> hierarchy = new LinkedHashSet<>();
+        for (ClassNode cursor = capability; cursor != null && hierarchy.add(cursor.name);
+                cursor = classes.get(cursor.superName)) {
+            // The selected ID and disabled flag belong to inherited client state.
+        }
+        OwnedMethod selectionSetter = playerSelectionSetter(classes, packet, hierarchy,
+                "(Ljava/lang/String;Ljava/lang/String;)V", "client model and texture setter");
+        OwnedMethod disabledSetter = playerSelectionSetter(classes, packet, hierarchy,
+                "(Z)V", "client model disabled setter");
+
+        List<OwnedMethod> modelWriters = new ArrayList<>();
+        List<AbstractInsnNode> selectionCode = realInstructions(selectionSetter.method());
+        for (int index = 2; index < selectionCode.size(); index++) {
+            if (selectionCode.get(index) instanceof MethodInsnNode call
+                    && call.getOpcode() != Opcodes.INVOKESTATIC
+                    && call.desc.equals("(Ljava/lang/String;)V")
+                    && hierarchy.contains(call.owner)
+                    && isVariableLoad(selectionCode.get(index - 2), Opcodes.ALOAD, 0)
+                    && isVariableLoad(selectionCode.get(index - 1), Opcodes.ALOAD, 1)) {
+                OwnedMethod writer = resolveHierarchyMethod(classes, call.owner, call.name, call.desc);
+                if (writer != null && !isStatic(writer.method()) && !modelWriters.contains(writer)) {
+                    modelWriters.add(writer);
+                }
+            }
+        }
+        if (modelWriters.size() != 1) {
+            throw new IOException("Expected one client model ID writer, found " + modelWriters.size());
+        }
+        OwnedMethod modelWriter = modelWriters.get(0);
+        YsmCompatibilityMap.FieldSymbol modelField = parameterFieldWrite(
+                modelWriter, "Ljava/lang/String;", Opcodes.ALOAD);
+        boolean feedsLookup = modelWriter.owner().methods.stream()
+                .filter(method -> reachable(modelWriter.owner(), modelWriter.method(), method))
+                .anyMatch(method -> readsSelectionIntoLookup(method, modelField, modelLookup));
+        if (!feedsLookup) {
+            throw new IOException("Client model ID writer does not feed the mapped model lookup");
+        }
+        YsmCompatibilityMap.FieldSymbol disabledField = parameterFieldWrite(
+                disabledSetter, "Z", Opcodes.ILOAD);
+        if (realInstructions(disabledSetter.method()).size() != 4) {
+            throw new IOException("Client model disabled setter has additional behavior");
+        }
+        return new PlayerModelSelectionSymbols(
+                directSelectionGetter(classes, hierarchy, modelField, Opcodes.ARETURN),
+                directSelectionGetter(classes, hierarchy, disabledField, Opcodes.IRETURN));
+    }
+
+    private static OwnedMethod playerSelectionSetter(Map<String, ClassNode> classes,
+            ClassNode packet, Set<String> hierarchy, String descriptor, String description)
+            throws IOException {
+        List<OwnedMethod> setters = packet.methods.stream()
+                .flatMap(method -> invocationNodes(method).stream())
+                .filter(call -> call.getOpcode() != Opcodes.INVOKESTATIC
+                        && hierarchy.contains(call.owner) && call.desc.equals(descriptor))
+                .map(call -> resolveHierarchyMethod(classes, call.owner, call.name, call.desc))
+                .filter(java.util.Objects::nonNull).distinct().toList();
+        if (setters.size() != 1 || !isPublic(setters.get(0).method())
+                || isStatic(setters.get(0).method())) {
+            throw new IOException("Expected one public " + description + ", found " + setters.size());
+        }
+        return setters.get(0);
+    }
+
+    private static YsmCompatibilityMap.FieldSymbol parameterFieldWrite(
+            OwnedMethod writer, String descriptor, int parameterOpcode) throws IOException {
+        List<AbstractInsnNode> code = realInstructions(writer.method());
+        List<YsmCompatibilityMap.FieldSymbol> fields = new ArrayList<>();
+        for (int index = 2; index < code.size(); index++) {
+            if (code.get(index) instanceof FieldInsnNode field
+                    && field.getOpcode() == Opcodes.PUTFIELD
+                    && field.owner.equals(writer.owner().name) && field.desc.equals(descriptor)
+                    && isVariableLoad(code.get(index - 2), Opcodes.ALOAD, 0)
+                    && isVariableLoad(code.get(index - 1), parameterOpcode, 1)) {
+                fields.add(new YsmCompatibilityMap.FieldSymbol(field.owner, field.name, field.desc));
+            }
+        }
+        List<YsmCompatibilityMap.FieldSymbol> writes = instanceFieldWrites(writer.method());
+        if (fields.size() != 1 || writes.size() != 1 || !fields.get(0).equals(writes.get(0))) {
+            throw new IOException("Client selection setter does not directly write one argument field");
+        }
+        FieldNode field = uniqueField(writer.owner(), candidate -> candidate.name.equals(
+                fields.get(0).name()) && candidate.desc.equals(descriptor), "client selection field");
+        if ((field.access & (Opcodes.ACC_STATIC | Opcodes.ACC_FINAL)) != 0) {
+            throw new IOException("Client selection field is not mutable instance state");
+        }
+        return fields.get(0);
+    }
+
+    private static boolean readsSelectionIntoLookup(MethodNode method,
+            YsmCompatibilityMap.FieldSymbol field, YsmMethodSymbol lookup) {
+        List<AbstractInsnNode> code = realInstructions(method);
+        for (int index = 2; index < code.size(); index++) {
+            if (code.get(index) instanceof MethodInsnNode call
+                    && call.getOpcode() == Opcodes.INVOKESTATIC && matches(call, lookup)
+                    && isVariableLoad(code.get(index - 2), Opcodes.ALOAD, 0)
+                    && code.get(index - 1) instanceof FieldInsnNode read
+                    && read.getOpcode() == Opcodes.GETFIELD && read.owner.equals(field.owner())
+                    && read.name.equals(field.name()) && read.desc.equals(field.descriptor())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static YsmCompatibilityMap.MethodSymbol directSelectionGetter(
+            Map<String, ClassNode> classes, Set<String> hierarchy,
+            YsmCompatibilityMap.FieldSymbol field, int returnOpcode) throws IOException {
+        List<OwnedMethod> getters = new ArrayList<>();
+        for (String ownerName : hierarchy) {
+            ClassNode owner = classes.get(ownerName);
+            for (MethodNode method : owner.methods) {
+                List<AbstractInsnNode> code = realInstructions(method);
+                if (isPublic(method) && !isStatic(method)
+                        && method.desc.equals("()" + field.descriptor()) && code.size() == 3
+                        && isVariableLoad(code.get(0), Opcodes.ALOAD, 0)
+                        && code.get(1) instanceof FieldInsnNode read
+                        && read.getOpcode() == Opcodes.GETFIELD && read.owner.equals(field.owner())
+                        && read.name.equals(field.name()) && read.desc.equals(field.descriptor())
+                        && code.get(2).getOpcode() == returnOpcode) {
+                    getters.add(new OwnedMethod(owner, method));
+                }
+            }
+        }
+        if (getters.size() != 1) {
+            throw new IOException("Expected one direct client selection getter, found " + getters.size());
+        }
+        OwnedMethod getter = getters.get(0);
+        if ((getter.owner().access & Opcodes.ACC_PUBLIC) == 0) {
+            throw new IOException("Client selection getter owner is not public");
+        }
+        return methodSymbol(getter.owner(), getter.method());
+    }
+
+    private static boolean isVariableLoad(AbstractInsnNode instruction, int opcode, int slot) {
+        return instruction instanceof VarInsnNode variable
+                && variable.getOpcode() == opcode && variable.var == slot;
     }
 
     private void recoverAnimationContextRoamingProvider(Map<String, ClassNode> classes,
@@ -2583,6 +2756,10 @@ public final class JarStructureAnalyzer {
                             YsmCompatibilityMap.MethodSymbol animationPacksGetter,
                             YsmCompatibilityMap.MethodSymbol orderedCountGetter,
                             YsmCompatibilityMap.MethodSymbol orderedNameGetter) {
+    }
+
+    record PlayerModelSelectionSymbols(YsmCompatibilityMap.MethodSymbol modelIdGetter,
+                                       YsmCompatibilityMap.MethodSymbol modelDisabledGetter) {
     }
 
     record PlayerStateSymbols(YsmCompatibilityMap.MethodSymbol animationSetter,
