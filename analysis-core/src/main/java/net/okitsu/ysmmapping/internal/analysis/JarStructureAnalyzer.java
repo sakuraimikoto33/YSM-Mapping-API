@@ -234,6 +234,7 @@ public final class JarStructureAnalyzer {
             recoverClientAudioCache(byName, values, diagnostics);
             recoverSubEntityRenderers(index, artifact.loader(), values, diagnostics);
             recoverMolangQueries(index, values, diagnostics);
+            recoverAnimationContextRoamingProvider(byName, values, diagnostics);
             return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
         } catch (StructuralAnalysisException ignored) {
             // Recover independent groups below; an individual failure is recorded per key.
@@ -296,6 +297,7 @@ public final class JarStructureAnalyzer {
         recoverAnimationRoulette(classes, artifact.loader(), values, diagnostics);
         recoverSubEntityRenderers(index, artifact.loader(), values, diagnostics);
         recoverMolangQueries(index, values, diagnostics);
+        recoverAnimationContextRoamingProvider(byName, values, diagnostics);
         try {
             ServerSyncResultSymbols result = findServerSyncResultSymbols(classes);
             putMethod(values, diagnostics, YsmSymbols.SERVER_SYNC_RESULT_SUCCESS_GETTER,
@@ -307,6 +309,135 @@ public final class JarStructureAnalyzer {
                     YsmSymbols.SERVER_SYNC_RESULT_ERROR_GETTER);
         }
         return new PartialAnalysis(Map.copyOf(values), Map.copyOf(diagnostics));
+    }
+
+    private void recoverAnimationContextRoamingProvider(Map<String, ClassNode> classes,
+            Map<YsmSymbolKey<?>, YsmResolvedSymbol> values,
+            Map<YsmSymbolKey<?>, String> diagnostics) {
+        if (!profile.definitions().containsKey(
+                YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER.id())) {
+            return;
+        }
+        try {
+            if (!(values.get(YsmSymbols.PLAYER_STATE_ROAMING_PROVIDER_GETTER)
+                    instanceof YsmMethodSymbol getter)
+                    || !(values.get(YsmSymbols.PLAYER_STATE_ROAMING_NAME_HASHER)
+                    instanceof YsmMethodSymbol hasher)) {
+                throw new IOException("Player roaming provider anchors are unavailable");
+            }
+            putMethod(values, diagnostics, YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER,
+                    findAnimationContextRoamingProviderBinder(classes, getter, hasher));
+        } catch (IOException | RuntimeException exception) {
+            fail(diagnostics, exception, YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER);
+        }
+    }
+
+    static YsmCompatibilityMap.MethodSymbol findAnimationContextRoamingProviderBinder(
+            Map<String, ClassNode> classes, YsmMethodSymbol providerGetter,
+            YsmMethodSymbol nameHasher) throws IOException {
+        Type providerType = Type.getReturnType(providerGetter.descriptor());
+        if (providerType.getSort() != Type.OBJECT) {
+            throw new IOException("Roaming provider getter does not return an object");
+        }
+        ClassNode provider = requireClass(classes, providerType.getInternalName(),
+                "roaming provider interface");
+        if ((provider.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_INTERFACE))
+                != (Opcodes.ACC_PUBLIC | Opcodes.ACC_INTERFACE)
+                || provider.methods.stream().noneMatch(method -> isPublic(method)
+                && !isStatic(method) && method.desc.equals("(I)Ljava/lang/Object;"))
+                || provider.methods.stream().noneMatch(method -> isPublic(method)
+                && !isStatic(method) && method.desc.equals("(ILjava/lang/Object;)V"))) {
+            throw new IOException("Roaming provider is not a public read/write interface");
+        }
+        String descriptor = "(" + providerType.getDescriptor() + ")V";
+        List<YsmCompatibilityMap.MethodSymbol> candidates = new ArrayList<>();
+        for (ClassNode caller : classes.values()) {
+            for (MethodNode method : caller.methods) {
+                List<AbstractInsnNode> code = realInstructions(method);
+                for (int index = 0; index + 1 < code.size(); index++) {
+                    if (!(code.get(index) instanceof MethodInsnNode getter)
+                            || !matches(getter, providerGetter)
+                            || !(code.get(index + 1) instanceof MethodInsnNode call)
+                            || call.getOpcode() != Opcodes.INVOKEVIRTUAL
+                            || !call.desc.equals(descriptor)) {
+                        continue;
+                    }
+                    ClassNode owner = classes.get(call.owner);
+                    if (owner == null || (owner.access & (Opcodes.ACC_INTERFACE
+                            | Opcodes.ACC_ABSTRACT)) != 0) {
+                        continue;
+                    }
+                    MethodNode binder = declaredMethod(owner, call.name, call.desc);
+                    if (binder == null || !isPublic(binder) || isStatic(binder)
+                            || (binder.access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) != 0
+                            || !bindsRoamingProvider(classes, owner, binder, nameHasher)) {
+                        continue;
+                    }
+                    YsmCompatibilityMap.MethodSymbol candidate = methodSymbol(owner, binder);
+                    if (!candidates.contains(candidate)) {
+                        candidates.add(candidate);
+                    }
+                }
+            }
+        }
+        if (candidates.size() != 1) {
+            throw new IOException("Expected one animation context roaming provider binder, found "
+                    + candidates.size());
+        }
+        return candidates.get(0);
+    }
+
+    private static boolean bindsRoamingProvider(Map<String, ClassNode> classes,
+            ClassNode owner, MethodNode binder, YsmMethodSymbol nameHasher) {
+        MethodNode initializer = declaredMethod(owner, "<clinit>", "()V");
+        if (initializer == null) {
+            return false;
+        }
+        List<FieldReference> roamingHashes = new ArrayList<>();
+        List<AbstractInsnNode> initialization = realInstructions(initializer);
+        for (int index = 0; index + 2 < initialization.size(); index++) {
+            if (initialization.get(index) instanceof LdcInsnNode literal
+                    && "roaming".equals(literal.cst)
+                    && initialization.get(index + 1) instanceof MethodInsnNode hash
+                    && hash.getOpcode() == Opcodes.INVOKESTATIC && matches(hash, nameHasher)
+                    && initialization.get(index + 2) instanceof FieldInsnNode field
+                    && field.getOpcode() == Opcodes.PUTSTATIC && field.owner.equals(owner.name)
+                    && field.desc.equals("I")) {
+                roamingHashes.add(new FieldReference(field.name, field.desc));
+            }
+        }
+        List<AbstractInsnNode> code = realInstructions(binder);
+        for (int index = 4; index < code.size(); index++) {
+            if (!(code.get(index) instanceof MethodInsnNode write)
+                    || (write.getOpcode() != Opcodes.INVOKEVIRTUAL
+                    && write.getOpcode() != Opcodes.INVOKEINTERFACE)
+                    || !write.desc.equals("(ILjava/lang/Object;)V")
+                    || !(code.get(index - 1) instanceof VarInsnNode parameter)
+                    || parameter.getOpcode() != Opcodes.ALOAD || parameter.var != 1
+                    || !(code.get(index - 2) instanceof FieldInsnNode hash)
+                    || hash.getOpcode() != Opcodes.GETSTATIC || !hash.owner.equals(owner.name)
+                    || !roamingHashes.contains(new FieldReference(hash.name, hash.desc))
+                    || !(code.get(index - 3) instanceof FieldInsnNode variables)
+                    || variables.getOpcode() != Opcodes.GETFIELD
+                    || !variables.owner.equals(owner.name)
+                    || !variables.desc.equals("L" + write.owner + ";")
+                    || !(code.get(index - 4) instanceof VarInsnNode receiver)
+                    || receiver.getOpcode() != Opcodes.ALOAD || receiver.var != 0) {
+                continue;
+            }
+            ClassNode storage = classes.get(write.owner);
+            MethodNode setter = storage == null ? null
+                    : declaredMethod(storage, write.name, write.desc);
+            if (setter != null && isPublic(setter) && !isStatic(setter)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean matches(MethodInsnNode call, YsmMethodSymbol symbol) {
+        return call.owner.equals(symbol.owner()) && call.name.equals(symbol.name())
+                && call.desc.equals(symbol.descriptor());
     }
 
     private void recoverMolangQueries(YsmClassIndex index,
