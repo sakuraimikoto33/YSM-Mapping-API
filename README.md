@@ -72,6 +72,8 @@ Mixinでsymbolを使用する場合は、Mixin configへpluginとruntime refmap 
 
 `ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER`は、公式animation contextへlive roaming providerを結び付けるpublic instance methodを表します。引数は公開provider interfaceの1個、戻り値は`void`です。consumerのMixinは`ysm.animation_context.roaming_provider_binder.method`へsource aliasを宣言し、評価用providerのbinding境界を利用できます。これはnetwork受信時のroaming値適用とは別の処理です。
 
+`PLAYER_STATE_MODEL_ID_GETTER`と`PLAYER_STATE_MODEL_DISABLED_GETTER`は、`PLAYER_STATE_CAPABILITY_CLASS`のclient stateから現在の選択model IDと無効化状態を読むpublic instance methodです。引数なしで、それぞれ`String`と`boolean`を返します。継承元がmethod ownerになる場合も、取得済みclient stateへ呼び出せます。model IDはresource fallback前の選択値で、server用の保存NBTをclientで読む必要はありません。
+
 ```json
 {
   "package": "net.example.mixin",

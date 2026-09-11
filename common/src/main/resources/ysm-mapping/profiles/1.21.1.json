@@ -652,6 +652,16 @@
       "definitionRevision": 1
     },
     {
+      "id": "ysm.player_state.model_disabled_getter.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
+      "id": "ysm.player_state.model_id_getter.method",
+      "kind": "METHOD",
+      "definitionRevision": 1
+    },
+    {
       "id": "ysm.player_state.roaming_name_hasher.method",
       "kind": "METHOD",
       "definitionRevision": 1

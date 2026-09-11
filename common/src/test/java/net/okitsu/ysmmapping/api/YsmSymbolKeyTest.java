@@ -13,9 +13,9 @@ class YsmSymbolKeyTest {
     @Test
     void exposesOnlyTheApprovedSemanticRegistry() {
         var symbols = YsmSymbols.all();
-        assertEquals(121, symbols.size());
+        assertEquals(123, symbols.size());
         assertEquals(18, symbols.stream().filter(key -> key.kind() == SymbolKind.CLASS).count());
-        assertEquals(92, symbols.stream().filter(key -> key.kind() == SymbolKind.METHOD).count());
+        assertEquals(94, symbols.stream().filter(key -> key.kind() == SymbolKind.METHOD).count());
         assertEquals(11, symbols.stream().filter(key -> key.kind() == SymbolKind.FIELD).count());
         assertEquals(YsmSymbols.RENDERER_CUSTOM_PROJECTILE_RENDER,
                 YsmSymbols.byId("ysm.client.renderer.custom_projectile.render.method").orElseThrow());
@@ -34,6 +34,10 @@ class YsmSymbolKeyTest {
                 YsmSymbols.byId("ysm.molang.query.context_get.method").orElseThrow());
         assertEquals(YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER,
                 YsmSymbols.byId("ysm.animation_context.roaming_provider_binder.method").orElseThrow());
+        assertEquals(YsmSymbols.PLAYER_STATE_MODEL_ID_GETTER,
+                YsmSymbols.byId("ysm.player_state.model_id_getter.method").orElseThrow());
+        assertEquals(YsmSymbols.PLAYER_STATE_MODEL_DISABLED_GETTER,
+                YsmSymbols.byId("ysm.player_state.model_disabled_getter.method").orElseThrow());
         assertTrue(symbols.stream().allMatch(key -> key.id().startsWith("ysm.")
                 && key.id().endsWith("." + key.kind().name().toLowerCase())));
         assertTrue(symbols.stream().allMatch(key -> key.origin() == SymbolOrigin.CURATED));
