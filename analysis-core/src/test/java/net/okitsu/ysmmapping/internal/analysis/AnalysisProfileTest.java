@@ -70,7 +70,7 @@ class AnalysisProfileTest {
         AnalysisProfile legacy = AnalysisProfile.load(
                 write("legacy-registry.json", profile("test-mc", false, true)));
 
-        assertEquals(120, YsmSymbols.all().size());
+        assertEquals(121, YsmSymbols.all().size());
         assertEquals(118, legacy.definitions().size());
         assertTrue(MOLANG_QUERY_GROUP.stream().allMatch(key -> key.kind() == SymbolKind.METHOD));
         assertTrue(MOLANG_QUERY_GROUP.stream().allMatch(key -> YsmSymbols.byId(key.id())
@@ -99,7 +99,9 @@ class AnalysisProfileTest {
                 write("extended.json", GSON.toJson(value)));
 
         assertEquals(120, extended.definitions().size());
-        extended.requireExactSymbols(YsmSymbols.all().stream().map(YsmSymbolKey::id).toList());
+        extended.requireExactSymbols(YsmSymbols.all().stream()
+                .filter(key -> !key.equals(YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER))
+                .map(YsmSymbolKey::id).toList());
         assertThrows(IllegalStateException.class, () -> extended.requireExactSymbols(
                 legacyKeys().stream().map(YsmSymbolKey::id).toList()));
         for (YsmSymbolKey<?> key : MOLANG_QUERY_GROUP) {
@@ -112,6 +114,25 @@ class AnalysisProfileTest {
         assertNotEquals(legacy.profileSha256(), extended.profileSha256());
         assertNotEquals(legacy.registryDefinitionSha256(), extended.registryDefinitionSha256());
         assertEquals(legacy.fingerprintDefinitionSha256(), extended.fingerprintDefinitionSha256());
+    }
+
+    @Test
+    void roamingBinderOptsInWithoutChangingExistingProfileDefinitions() throws Exception {
+        JsonObject value = JsonParser.parseString(profile("test-mc", false, true))
+                .getAsJsonObject();
+        MOLANG_QUERY_GROUP.forEach(key -> addSymbol(value, key));
+        AnalysisProfile before = AnalysisProfile.load(write("before-binder.json", GSON.toJson(value)));
+        addSymbol(value, YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER);
+        AnalysisProfile after = AnalysisProfile.load(write("with-binder.json", GSON.toJson(value)));
+
+        assertEquals(121, after.definitions().size());
+        after.requireExactSymbols(YsmSymbols.all().stream().map(YsmSymbolKey::id).toList());
+        before.definitions().forEach((id, definition) ->
+                assertEquals(definition, after.definitions().get(id)));
+        assertNotEquals(before.registryDefinitionSha256(), after.registryDefinitionSha256());
+        assertEquals(before.fingerprintDefinitionSha256(), after.fingerprintDefinitionSha256());
+        assertEquals(1, after.definitions().get(
+                YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER.id()).definitionRevision());
     }
 
     @Test
@@ -242,7 +263,8 @@ class AnalysisProfileTest {
     }
 
     private static List<YsmSymbolKey<?>> legacyKeys() {
-        return YsmSymbols.all().stream().filter(key -> !MOLANG_QUERY_GROUP.contains(key)).toList();
+        return YsmSymbols.all().stream().filter(key -> !MOLANG_QUERY_GROUP.contains(key)
+                && !key.equals(YsmSymbols.ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER)).toList();
     }
 
     private static void addSymbol(JsonObject profile, YsmSymbolKey<?> key) {
