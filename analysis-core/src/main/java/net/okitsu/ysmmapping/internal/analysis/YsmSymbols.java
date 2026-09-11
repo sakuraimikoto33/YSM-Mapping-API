@@ -184,6 +184,8 @@ public final class YsmSymbols {
             methodKey("ysm.player_state.roaming_name_hasher.method");
     public static final YsmSymbolKey<YsmMethodSymbol> PLAYER_STATE_FULL_ROAMING_INITIALIZER =
             methodKey("ysm.player_state.full_roaming_initializer.method");
+    public static final YsmSymbolKey<YsmMethodSymbol> ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER =
+            methodKey("ysm.animation_context.roaming_provider_binder.method");
 
     public static final YsmSymbolKey<YsmMethodSymbol> EQUIPMENT_ELYTRA_ITEM_GETTER =
             methodKey("ysm.client.equipment.elytra_item_getter.method");
@@ -266,8 +268,9 @@ public final class YsmSymbols {
 
     // A Minecraft-owned profile opts into an additional surface by listing its whole group.
     // Existing profiles must keep requiring every symbol outside these explicit groups.
-    private static final List<Set<String>> OPTIONAL_PROFILE_SYMBOL_GROUPS = List.of(Set.of(
-            MOLANG_GROUND_SPEED2_QUERY.id(), MOLANG_QUERY_CONTEXT_GET.id()));
+    private static final List<Set<String>> OPTIONAL_PROFILE_SYMBOL_GROUPS = List.of(
+            Set.of(MOLANG_GROUND_SPEED2_QUERY.id(), MOLANG_QUERY_CONTEXT_GET.id()),
+            Set.of(ANIMATION_CONTEXT_ROAMING_PROVIDER_BINDER.id()));
 
     private static final List<Integer> PACKET_IDS = List.of(
             1, 2, 3, 4, 5, 7, 15, 16, 17, 18, 19, 21, 22, 23, 51, 52);
